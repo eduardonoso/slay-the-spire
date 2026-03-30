@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Roguelike - Combat Demo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <button id="mute-btn" onclick="toggleMute()">🔊</button>
+    <div id="turn-banner" class="turn-banner hidden"></div>
+    <div id="relic-bar"></div>
+    <div id="encounter-info"></div>
+
+    <div id="enemy-area"></div>
+
+    <div id="middle-area">
+      <div id="combat-log"></div>
+    </div>
+
+    <div id="player-area">
+      <div id="player-avatar">🧙‍♂️</div>
+      <div id="energy-display">3/3</div>
+      <div id="player-hp">
+        <span>&#x2764;</span>
+        <div class="hp-bar-container">
+          <div class="hp-bar-fill" id="player-hp-fill"></div>
+        </div>
+        <span class="hp-text" id="player-hp-text">80/80</span>
+      </div>
+      <div id="player-block">
+        <span class="block-icon">&#x1f6e1;</span>
+        <span id="player-block-text">0</span>
+      </div>
+      <div id="player-status-effects"></div>
+      <div id="gold-display"></div>
+      <div id="potion-slots"></div>
+    </div>
+
+    <div id="hand-area"></div>
+
+    <div id="pile-info">
+      <div id="draw-pile-count">Draw: 0</div>
+      <button id="end-turn-btn" onclick="endPlayerTurn()">End Turn</button>
+      <div id="discard-pile-count">Discard: 0</div>
+      <div id="exhaust-pile-count">Exhaust: 0</div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="overlay-screen hidden">
+      <div class="overlay-title" style="color:#feca57;font-size:42px;">&#x2694;&#xFE0F; Card Roguelike</div>
+      <div class="overlay-subtitle">A Slay the Spire-inspired demo</div>
+      <div id="start-options"></div>
+    </div>
+
+    <!-- Reward Screen -->
+    <div id="reward-screen" class="overlay-screen hidden">
+      <div class="overlay-title victory">Victory!</div>
+      <div class="overlay-subtitle">Choose a card to add to your deck:</div>
+      <div id="reward-cards"></div>
+      <button class="btn btn-secondary" onclick="skipReward()">Skip</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="overlay-screen hidden">
+      <div class="overlay-title defeat" id="game-over-title">Defeat</div>
+      <div class="overlay-subtitle" id="game-over-subtitle">You have been slain.</div>
+      <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
+    </div>
+
+    <!-- Map Screen -->
+    <div id="map-screen" class="overlay-screen hidden">
+      <div class="overlay-title" style="font-size:24px;margin-bottom:10px;">Floor Map</div>
+      <div id="map-container"></div>
+      <div id="map-player-info"></div>
+    </div>
+
+    <!-- Rest Screen -->
+    <div id="rest-screen" class="overlay-screen hidden">
+      <div class="overlay-title" style="color:#feca57;">Rest Site</div>
+      <div class="overlay-subtitle">Choose an action:</div>
+      <div id="rest-options"></div>
+    </div>
+
+    <!-- Shop Screen -->
+    <div id="shop-screen" class="overlay-screen hidden">
+      <div class="overlay-title" style="color:#feca57;">Shop</div>
+      <div id="shop-gold" style="color:#feca57;font-size:18px;margin-bottom:15px;"></div>
+      <div id="shop-items"></div>
+      <button class="btn btn-secondary" onclick="closeShop()">Leave Shop</button>
+    </div>
+
+    <!-- Event Screen -->
+    <div id="event-screen" class="overlay-screen hidden">
+      <div id="event-art" style="font-size:64px;margin-bottom:15px;"></div>
+      <div class="overlay-title" id="event-title" style="font-size:24px;"></div>
+      <div class="overlay-subtitle" id="event-description"></div>
+      <div id="event-choices"></div>
+    </div>
+
+    <!-- Relic Reward Screen -->
+    <div id="relic-reward-screen" class="overlay-screen hidden">
+      <div class="overlay-title victory">Choose a Relic!</div>
+      <div id="relic-choices"></div>
+      <button class="btn btn-secondary" onclick="skipRelicReward()">Skip</button>
+    </div>
+
+    <!-- Upgrade Screen (for rest site smith) -->
+    <div id="upgrade-screen" class="overlay-screen hidden">
+      <div class="overlay-title" style="color:#feca57;">Upgrade a Card</div>
+      <div class="overlay-subtitle">Click a card to upgrade it:</div>
+      <div id="upgrade-cards"></div>
+      <button class="btn btn-secondary" onclick="cancelUpgrade()">Cancel</button>
+    </div>
+
+    <!-- Card Remove Screen (for shop) -->
+    <div id="remove-screen" class="overlay-screen hidden">
+      <div class="overlay-title" style="color:#ff4757;">Remove a Card</div>
+      <div class="overlay-subtitle">Click a card to remove it from your deck:</div>
+      <div id="remove-cards"></div>
+      <button class="btn btn-secondary" onclick="cancelRemove()">Cancel</button>
+    </div>
+
+    <!-- Pile Viewer -->
+    <div id="pile-viewer" class="overlay-screen hidden">
+      <div class="overlay-title" id="pile-viewer-title" style="font-size:24px;"></div>
+      <div id="pile-viewer-cards"></div>
+      <button class="btn btn-secondary" onclick="closePileViewer()">Close</button>
+    </div>
+
+    <!-- Tutorial -->
+    <div id="tutorial-screen" class="overlay-screen hidden">
+      <div class="overlay-title" style="color:#feca57;font-size:28px;">How to Play</div>
+      <div id="tutorial-content" style="max-width:600px;text-align:left;line-height:1.8;font-size:14px;color:#ccc;margin-bottom:20px;">
+        <p>⚔️ <strong>Cards</strong> — Click cards to play them. Attack cards need a target (click an enemy). Skills play instantly.</p>
+        <p>🔴 <strong>Energy</strong> — Each card costs energy (red circle). You get 3 per turn.</p>
+        <p>🛡️ <strong>Block</strong> — Reduces incoming damage. Resets each turn.</p>
+        <p>👁️ <strong>Intents</strong> — Enemy actions shown above them. Plan accordingly!</p>
+        <p>⏭️ <strong>End Turn</strong> — Click or press E when done playing cards.</p>
+        <p>🗺️ <strong>Map</strong> — Choose your path: fights, shops, rest sites, events, and more.</p>
+        <p>⌨️ <strong>Shortcuts</strong> — 1-5 select cards, E ends turn, Escape cancels.</p>
+      </div>
+      <button class="btn btn-primary" onclick="closeTutorial()">Got it!</button>
+    </div>
+
+    <!-- Card Preview (mobile) -->
+    <div id="card-preview" class="overlay-screen hidden" style="background:rgba(0,0,0,0.7);"></div>
+
+    <div id="tooltip"></div>
+  </div>
+
+  <script src="cards.js"></script>
+  <script src="enemies.js"></script>
+  <script src="potions.js"></script>
+  <script src="relics.js"></script>
+  <script src="events.js"></script>
+  <script src="shop.js"></script>
+  <script src="map.js"></script>
+  <script src="audio.js"></script>
+  <script src="game.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>
