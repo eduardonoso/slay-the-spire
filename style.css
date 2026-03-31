@@ -657,13 +657,12 @@ body {
 .map-floor {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 16px;
   padding: 2px 0;
-  border-bottom: 1px dotted rgba(255,255,255,0.1);
 }
 
 .map-floor:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .map-floor-label {

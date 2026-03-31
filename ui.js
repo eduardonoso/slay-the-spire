@@ -682,6 +682,88 @@ function _showMapScreen() {
     container.appendChild(floorDiv);
   }
 
+  // Helpers for offset calculation
+  function getOffsetTop(el, ancestor) {
+    var top = 0;
+    while (el && el !== ancestor) { top += el.offsetTop; el = el.offsetParent; }
+    return top;
+  }
+  function getOffsetLeft(el, ancestor) {
+    var left = 0;
+    while (el && el !== ancestor) { left += el.offsetLeft; el = el.offsetParent; }
+    return left;
+  }
+
+  // Set position for SVG overlay
+  container.style.position = 'relative';
+
+  // Draw connection lines using SVG overlay
+  setTimeout(function() {
+    // Remove old SVG if any
+    var oldSvg = container.querySelector('.map-lines');
+    if (oldSvg) oldSvg.parentNode.removeChild(oldSvg);
+
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'map-lines');
+    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+    svg.setAttribute('width', container.scrollWidth);
+    svg.setAttribute('height', container.scrollHeight);
+
+    var floorDivs = container.querySelectorAll('.map-floor');
+    // floorDivs[0] = floor 15 (top), floorDivs[last] = floor 1 (bottom)
+    // map data: floor f connects to floor f+1
+    // In DOM: floor f is at index (map.floors.length - 1 - f)
+
+    for (var fl = 0; fl < map.floors.length - 1; fl++) {
+      var fromDomIdx = map.floors.length - 1 - fl;
+      var toDomIdx = map.floors.length - 1 - (fl + 1);
+      if (!floorDivs[fromDomIdx] || !floorDivs[toDomIdx]) continue;
+
+      var fromNodes = floorDivs[fromDomIdx].querySelectorAll('.map-node');
+      var toNodes = floorDivs[toDomIdx].querySelectorAll('.map-node');
+
+      for (var ni = 0; ni < map.floors[fl].length; ni++) {
+        var node = map.floors[fl][ni];
+        if (!fromNodes[ni]) continue;
+
+        for (var ci = 0; ci < node.connections.length; ci++) {
+          var targetIdx = node.connections[ci];
+          if (!toNodes[targetIdx]) continue;
+
+          // Use offsetTop/offsetLeft relative to container for scroll-safe positioning
+          var fromEl = fromNodes[ni];
+          var toEl = toNodes[targetIdx];
+          // Source is lower in DOM (higher floor number), target is above (lower floor number rendered higher)
+          var x1 = getOffsetLeft(fromEl, container) + fromEl.offsetWidth / 2;
+          var y1 = getOffsetTop(fromEl, container) + fromEl.offsetHeight / 2;
+          var x2 = getOffsetLeft(toEl, container) + toEl.offsetWidth / 2;
+          var y2 = getOffsetTop(toEl, container) + toEl.offsetHeight / 2;
+
+          var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', x1);
+          line.setAttribute('y1', y1);
+          line.setAttribute('x2', x2);
+          line.setAttribute('y2', y2);
+
+          // Style based on visited state
+          var isVisited = map.floors[fl][ni].visited && map.floors[fl + 1][targetIdx].visited;
+          line.setAttribute('stroke', isVisited ? 'rgba(46,213,115,0.5)' : 'rgba(255,255,255,0.25)');
+          line.setAttribute('stroke-width', isVisited ? '3' : '2');
+
+          svg.appendChild(line);
+        }
+      }
+    }
+
+    container.appendChild(svg);
+
+    // Scroll to current/available floor after lines are drawn and layout is stable
+    var availableNode = container.querySelector('.map-node.available') || container.querySelector('.map-node.current');
+    if (availableNode) {
+      availableNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 100);
+
   // Player info
   var info = document.getElementById('map-player-info');
   info.innerHTML = '\u2764\uFE0F ' + gameState.player.currentHp + '/' + gameState.player.maxHp +
@@ -697,14 +779,6 @@ function _showMapScreen() {
   });
   info.appendChild(document.createElement('br'));
   info.appendChild(deckBtn);
-
-  // Scroll to current/available floor
-  setTimeout(function() {
-    var availableNode = container.querySelector('.map-node.available') || container.querySelector('.map-node.current');
-    if (availableNode) {
-      availableNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, 50);
 
   // Show tutorial on first visit
   if (!localStorage.getItem('stsTutorialSeen')) {
