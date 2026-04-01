@@ -42,8 +42,8 @@ var CARD_DATABASE = {
     type: 'attack',
     cost: 1,
     art: '🪓',
-    description: 'Deal 8 damage to ALL enemies.',
-    effects: [{ type: 'damageAll', value: 8 }],
+    description: 'Deal 9 damage to ALL enemies.',
+    effects: [{ type: 'damageAll', value: 9 }],
     rarity: 'common',
     needsTarget: false
   },
@@ -177,8 +177,8 @@ var CARD_DATABASE = {
   // === Phase 2: Draw/pile cards ===
   battle_trance: {
     id: 'battle_trance', name: 'Battle Trance', type: 'skill', cost: 0, art: '🧘',
-    description: 'Draw 3 cards.',
-    effects: [{ type: 'drawCards', value: 3 }],
+    description: 'Draw 3 cards. You cannot draw additional cards this turn.',
+    effects: [{ type: 'drawCards', value: 3 }, { type: 'setFlag', flag: 'noDraw' }],
     rarity: 'uncommon', needsTarget: false
   },
 
@@ -391,11 +391,55 @@ function createStarterDeck() {
 
 function getRandomRewardCards(count) {
   var cards = [];
+  var act = (typeof gameState !== 'undefined' && gameState.act) ? gameState.act : 1;
   for (var i = 0; i < count; i++) {
     var roll = Math.random();
     var rarity;
-    if (roll < 0.55) rarity = 'common';
-    else if (roll < 0.88) rarity = 'uncommon';
+    if (act >= 2) {
+      // Act 2: favor uncommon and rare cards more
+      if (roll < 0.35) rarity = 'common';
+      else if (roll < 0.78) rarity = 'uncommon';
+      else rarity = 'rare';
+    } else {
+      if (roll < 0.55) rarity = 'common';
+      else if (roll < 0.88) rarity = 'uncommon';
+      else rarity = 'rare';
+    }
+
+    var pool = REWARD_POOL[rarity];
+    var cardId = pool[Math.floor(Math.random() * pool.length)];
+
+    // Avoid duplicates in the reward selection
+    var attempts = 0;
+    while (cards.some(function(c) { return c.id === cardId; }) && attempts < 10) {
+      roll = Math.random();
+      if (act >= 2) {
+        if (roll < 0.35) rarity = 'common';
+        else if (roll < 0.78) rarity = 'uncommon';
+        else rarity = 'rare';
+      } else {
+        if (roll < 0.55) rarity = 'common';
+        else if (roll < 0.88) rarity = 'uncommon';
+        else rarity = 'rare';
+      }
+      pool = REWARD_POOL[rarity];
+      cardId = pool[Math.floor(Math.random() * pool.length)];
+      attempts++;
+    }
+
+    cards.push(createCardInstance(cardId));
+  }
+  return cards;
+}
+
+function getEliteRewardCards(count) {
+  var cards = [];
+  for (var i = 0; i < count; i++) {
+    var roll = Math.random();
+    var rarity;
+    // Elite rewards: better rarity weights (more uncommon/rare)
+    if (roll < 0.25) rarity = 'common';
+    else if (roll < 0.65) rarity = 'uncommon';
     else rarity = 'rare';
 
     var pool = REWARD_POOL[rarity];
@@ -405,8 +449,8 @@ function getRandomRewardCards(count) {
     var attempts = 0;
     while (cards.some(function(c) { return c.id === cardId; }) && attempts < 10) {
       roll = Math.random();
-      if (roll < 0.55) rarity = 'common';
-      else if (roll < 0.88) rarity = 'uncommon';
+      if (roll < 0.25) rarity = 'common';
+      else if (roll < 0.65) rarity = 'uncommon';
       else rarity = 'rare';
       pool = REWARD_POOL[rarity];
       cardId = pool[Math.floor(Math.random() * pool.length)];

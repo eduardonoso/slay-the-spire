@@ -28,8 +28,11 @@ var gameState = {
   selectedCard: null, // instanceId of selected card for targeting
   selectedPotion: null,
   map: null,
+  act: 1,
+  act1Boss: null,
   isEliteFight: false,
   isBossFight: false,
+  _act2EliteHpBonus: false,
   stats: {
     turnsPlayed: 0,
     cardsPlayed: 0,
@@ -64,6 +67,16 @@ function initCombat(enemyIds) {
   // Accept string or array
   if (typeof enemyIds === 'string') enemyIds = [enemyIds];
   gameState.enemies = enemyIds.map(function(id) { return createEnemyInstance(id); });
+
+  // Act 2 elite HP bonus: +20%
+  if (gameState._act2EliteHpBonus) {
+    for (var eb = 0; eb < gameState.enemies.length; eb++) {
+      var bonus = Math.floor(gameState.enemies[eb].maxHp * 0.2);
+      gameState.enemies[eb].maxHp += bonus;
+      gameState.enemies[eb].currentHp += bonus;
+    }
+    gameState._act2EliteHpBonus = false;
+  }
   gameState.turn = 0;
   gameState.selectedCard = null;
   gameState.combatLog = [];
@@ -82,6 +95,7 @@ function initCombat(enemyIds) {
 
   gameState.player._redSkullActive = false;
   gameState.player.penNibActive = false;
+  gameState.player._flag_noDraw = false;
   gameState.centennialUsed = false;
   gameState.player._selfFormingClayTriggered = false;
 
@@ -103,12 +117,18 @@ function startGame() {
   gameState.player.potions = [null, null, null];
   gameState.player.cardRemovalsUsed = 0;
   gameState.player.powers = {};
-  gameState.map = generateMap();
+  gameState.act = 1;
+  gameState.act1Boss = null;
+  gameState._act2EliteHpBonus = false;
+  gameState.map = generateMap(1);
   gameState.encounterIndex = 0;
   gameState.isEliteFight = false;
   gameState.isBossFight = false;
   gameState.stats = { turnsPlayed: 0, cardsPlayed: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, floorsCleared: 0, enemiesKilled: 0 };
   gameState.phase = 'map';
+  // Remove act-2 class if present
+  var container = document.getElementById('game-container');
+  if (container) container.classList.remove('act-2');
   hideOverlays();
   renderCombat();
   showMapScreen();
@@ -314,11 +334,13 @@ function usePotion(slotIndex, targetIndex) {
   gameState.player.potions[slotIndex] = null;
   gameState.selectedPotion = null;
   log('Used ' + potionData.name + '.');
+  if (typeof AudioManager !== 'undefined' && AudioManager.enabled) AudioManager.playPotionSound();
   renderCombat();
 }
 
 // === CARD DRAWING ===
 function drawCards(count) {
+  if (gameState.player._flag_noDraw) return;
   for (var i = 0; i < count; i++) {
     if (gameState.player.drawPile.length === 0) {
       if (gameState.player.discardPile.length === 0) break;
@@ -640,6 +662,10 @@ function resolveEffect(effect, source, target, card, energySpent) {
       gameState.player.powers[effect.power] = (gameState.player.powers[effect.power] || 0) + effect.value;
       break;
 
+    case 'setFlag':
+      gameState.player['_flag_' + effect.flag] = true;
+      break;
+
     case 'applyStatusAll':
       for (var sa = 0; sa < gameState.enemies.length; sa++) {
         var sae = gameState.enemies[sa];
@@ -776,7 +802,14 @@ function applyDamage(damage, target) {
   }
 
   target.currentHp -= hpLoss;
-  if (hpLoss > 0 && typeof AudioManager !== 'undefined' && AudioManager.enabled) AudioManager.playDamageSound(hpLoss);
+  if (typeof AudioManager !== 'undefined' && AudioManager.enabled) {
+    if (hpLoss > 0) {
+      AudioManager.playDamageSound(hpLoss);
+    } else if (damage > 0 && hpLoss === 0) {
+      // Block absorbed all damage
+      AudioManager.playShieldSound();
+    }
+  }
 
   if (hpLoss > 0) {
     if (target === gameState.player) {
@@ -809,6 +842,9 @@ function applyDamage(damage, target) {
     target.currentHp = 0;
     target.dead = true;
     gameState.stats.enemiesKilled++;
+    if (target !== gameState.player && typeof AudioManager !== 'undefined' && AudioManager.enabled) {
+      AudioManager.playEnemyDeathSound();
+    }
     if (target.onDeath) target.onDeath();
   }
   return { damage: damage, blocked: blocked, hpLoss: hpLoss };
@@ -944,8 +980,13 @@ function onCombatVictory() {
   log('All enemies defeated!');
 
   // Give gold
-  var goldReward = 10 + Math.floor(Math.random() * 15);
-  if (gameState.isEliteFight) goldReward = 25 + Math.floor(Math.random() * 15);
+  var goldReward = 10 + Math.floor(Math.random() * 11);
+  if (gameState.isEliteFight) {
+    // Elites give 25-40 base + 25-40 bonus gold
+    goldReward = 25 + Math.floor(Math.random() * 16);
+    var bonusGold = 25 + Math.floor(Math.random() * 16);
+    goldReward += bonusGold;
+  }
   if (gameState.isBossFight) goldReward = 50 + Math.floor(Math.random() * 25);
   gameState.player.gold += goldReward;
   gameState.stats.goldEarned += goldReward;
@@ -965,7 +1006,12 @@ function onCombatVictory() {
   }
 
   renderCombat();
-  showRewardScreen();
+  // Elites get better card rewards (higher rarity weights)
+  if (gameState.isEliteFight) {
+    showEliteRewardScreen();
+  } else {
+    showRewardScreen();
+  }
 }
 
 function onPlayerDeath() {
@@ -996,6 +1042,8 @@ function advanceEncounter() {
 function restartGame() {
   _cardInstanceId = 0;
   clearSave();
+  var container = document.getElementById('game-container');
+  if (container) container.classList.remove('act-2');
   startGame();
   hideOverlays();
 }
@@ -1012,6 +1060,9 @@ function triggerScreenShake() {
 }
 function showRewardScreen() {
   if (typeof _showRewardScreen === 'function') _showRewardScreen();
+}
+function showEliteRewardScreen() {
+  if (typeof _showEliteRewardScreen === 'function') _showEliteRewardScreen();
 }
 function showGameOverScreen(victory) {
   if (typeof _showGameOverScreen === 'function') _showGameOverScreen(victory);
@@ -1068,6 +1119,16 @@ function loadGame() {
         enemy.getNextIntent = template.getNextIntent;
         if (template.onDamaged) enemy.onDamaged = template.onDamaged;
         if (template.onDeath) enemy.onDeath = template.onDeath;
+      }
+    }
+
+    // Restore Act 2 visual theme if needed
+    var container = document.getElementById('game-container');
+    if (container) {
+      if (gameState.act === 2) {
+        container.classList.add('act-2');
+      } else {
+        container.classList.remove('act-2');
       }
     }
 

@@ -164,7 +164,7 @@ var ENEMY_DATABASE = {
     id: 'slime_boss',
     name: 'Slime Boss',
     sprite: '🟢',
-    maxHp: [140, 140],
+    maxHp: [150, 150],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber % 3 === 0) {
         return {

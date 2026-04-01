@@ -101,6 +101,45 @@ var AudioManager = {
   playDrawCard: function() {
     this._playNoise(0.03, 0.04);
     this._playTone(2000, 0.03, 'sine', 0.03, true);
+  },
+
+  playPotionSound: function() {
+    // Glass clink: high-pitched sine + short noise burst
+    this._playTone(1800, 0.06, 'sine', 0.1, true);
+    this._playTone(2400, 0.04, 'sine', 0.06, true);
+    this._playNoise(0.03, 0.04);
+  },
+
+  playRelicSound: function() {
+    // Magical chime: ascending sine tones
+    var notes = [880, 1108, 1318, 1760];
+    for (var i = 0; i < notes.length; i++) {
+      (function(n, delay) {
+        setTimeout(function() {
+          AudioManager._playTone(n, 0.2, 'sine', 0.08, true);
+        }, delay);
+      })(notes[i], i * 70);
+    }
+  },
+
+  playEnemyDeathSound: function() {
+    // Deeper death sound than player death
+    this._playTone(200, 0.2, 'sawtooth', 0.12, true);
+    this._playNoise(0.15, 0.06);
+    setTimeout(function() {
+      AudioManager._playTone(120, 0.3, 'sawtooth', 0.1, true);
+    }, 120);
+    setTimeout(function() {
+      AudioManager._playTone(60, 0.4, 'sawtooth', 0.08, true);
+    }, 250);
+  },
+
+  playShieldSound: function() {
+    // Metallic clang when block absorbs all damage
+    this._playTone(800, 0.08, 'square', 0.1, true);
+    this._playTone(1200, 0.06, 'square', 0.06, true);
+    this._playTone(600, 0.1, 'triangle', 0.08, true);
+    this._playNoise(0.04, 0.05);
   }
 };
 

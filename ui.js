@@ -147,9 +147,16 @@ function createCardElement(card, index, totalCards) {
   el.style.animationDelay = (index * 0.06) + 's';
   el.classList.add('dealing');
 
+  // Dynamic overlap for large hands
+  if (totalCards > 6) {
+    var overlapMargin = -8 - (totalCards - 6) * 4;
+    overlapMargin = Math.max(overlapMargin, -28);
+    el.style.margin = '0 ' + overlapMargin + 'px';
+  }
+
   // Fan rotation
   if (totalCards > 1) {
-    var spread = Math.min(totalCards * 4, 30);
+    var spread = Math.min(totalCards * 4, 35);
     var angle = -spread / 2 + (spread / (totalCards - 1)) * index;
     var yOffset = Math.abs(angle) * 0.5;
     el.style.transform = 'rotate(' + angle + 'deg) translateY(' + yOffset + 'px)';
@@ -436,7 +443,8 @@ function renderCombatLog() {
 function renderEncounterInfo() {
   var el = document.getElementById('encounter-info');
   if (gameState.map) {
-    el.textContent = 'Floor ' + gameState.map.currentFloor + ' / ' + MAP_CONFIG.floors;
+    var act = gameState.act || 1;
+    el.textContent = 'ACT ' + act + ' - Floor ' + gameState.map.currentFloor + ' / ' + MAP_CONFIG.floors;
   }
 }
 
@@ -616,6 +624,22 @@ function skipReward() {
   advanceEncounter();
 }
 
+function _showEliteRewardScreen() {
+  var screen = document.getElementById('reward-screen');
+  screen.classList.remove('hidden');
+
+  var cardsContainer = document.getElementById('reward-cards');
+  cardsContainer.innerHTML = '';
+
+  // Use elite reward cards with better rarity weights
+  var rewards = getEliteRewardCards(3);
+  for (var i = 0; i < rewards.length; i++) {
+    var card = rewards[i];
+    var el = createRewardCardElement(card);
+    cardsContainer.appendChild(el);
+  }
+}
+
 function _showGameOverScreen(victory) {
   var screen = document.getElementById('game-over-screen');
   screen.classList.remove('hidden');
@@ -626,11 +650,17 @@ function _showGameOverScreen(victory) {
   if (victory) {
     title.textContent = 'Victory!';
     title.className = 'overlay-title victory';
-    subtitle.textContent = 'You conquered the Spire! Deck size: ' + gameState.player.deck.length + ' cards. Gold: ' + (gameState.player.gold || 0) + '.';
+    var act = gameState.act || 1;
+    if (act >= 2) {
+      subtitle.textContent = 'You conquered the Spire! All acts cleared! Deck: ' + gameState.player.deck.length + ' cards. Gold: ' + (gameState.player.gold || 0) + '.';
+    } else {
+      subtitle.textContent = 'You conquered the Spire! Deck size: ' + gameState.player.deck.length + ' cards. Gold: ' + (gameState.player.gold || 0) + '.';
+    }
   } else {
     title.textContent = 'Defeat';
     title.className = 'overlay-title defeat';
-    var floorText = gameState.map ? 'floor ' + gameState.map.currentFloor : 'encounter ' + (gameState.encounterIndex + 1);
+    var act2 = gameState.act || 1;
+    var floorText = gameState.map ? 'Act ' + act2 + ' floor ' + gameState.map.currentFloor : 'encounter ' + (gameState.encounterIndex + 1);
     subtitle.textContent = 'You have been slain on ' + floorText + '.';
   }
 
@@ -654,7 +684,7 @@ function _showGameOverScreen(victory) {
 }
 
 function _hideOverlays() {
-  var screens = ['reward-screen', 'game-over-screen', 'map-screen', 'rest-screen', 'shop-screen', 'event-screen', 'relic-reward-screen', 'upgrade-screen', 'remove-screen', 'pile-viewer', 'start-screen', 'tutorial-screen', 'card-preview'];
+  var screens = ['reward-screen', 'game-over-screen', 'map-screen', 'rest-screen', 'shop-screen', 'event-screen', 'relic-reward-screen', 'upgrade-screen', 'remove-screen', 'pile-viewer', 'start-screen', 'tutorial-screen', 'card-preview', 'act-transition'];
   for (var i = 0; i < screens.length; i++) {
     var el = document.getElementById(screens[i]);
     if (el) el.classList.add('hidden');
@@ -728,6 +758,13 @@ function _showMapScreen() {
   _hideOverlays();
   var screen = document.getElementById('map-screen');
   screen.classList.remove('hidden');
+
+  // Update map title to show act
+  var mapTitle = screen.querySelector('.overlay-title');
+  if (mapTitle) {
+    var act = gameState.act || 1;
+    mapTitle.textContent = 'Act ' + act + ' Floor Map';
+  }
 
   var container = document.getElementById('map-container');
   container.innerHTML = '';
@@ -1244,6 +1281,7 @@ function _showRelicRewardScreen(relicIds) {
       el.addEventListener('click', function() {
         gameState.player.relics.push(id);
         log('Gained ' + RELIC_DATABASE[id].name + '!');
+        if (typeof AudioManager !== 'undefined' && AudioManager.enabled) AudioManager.playRelicSound();
         // Apply immediate pickup effects
         if (RELIC_DATABASE[id].trigger === 'onPickup') {
           switch (id) {

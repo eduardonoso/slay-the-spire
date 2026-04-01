@@ -15,7 +15,7 @@ var NODE_TYPES = {
   start: { icon: '\uD83E\uDDD9', label: 'Start' }
 };
 
-// Normal enemy pools for map fights
+// === ACT 1 FIGHT POOLS ===
 var FIGHT_POOLS = [
   ['jaw_worm'],
   ['cultist'],
@@ -54,7 +54,27 @@ var FIGHT_POOLS_HARD = [
 
 var ELITE_POOL = ['nob', 'lagavulin', 'book_of_stabbing'];
 
-function generateMap() {
+// === ACT 2 FIGHT POOLS ===
+var FIGHT_POOLS_ACT2_EASY = [
+  ['snecko'],
+  ['acid_slime_m', 'acid_slime_m'],
+  ['spike_slime_m', 'spike_slime_m']
+];
+
+var FIGHT_POOLS_ACT2_MEDIUM = [
+  ['snecko', 'spike_slime_m'],
+  ['fungi_beast', 'fungi_beast', 'fungi_beast'],
+  ['cultist', 'cultist']
+];
+
+var FIGHT_POOLS_ACT2_HARD = [
+  ['book_of_stabbing'],
+  ['jaw_worm', 'jaw_worm', 'jaw_worm'],
+  ['looter', 'looter', 'red_louse']
+];
+
+function generateMap(act) {
+  act = act || 1;
   var floors = [];
 
   for (var f = 0; f < MAP_CONFIG.floors; f++) {
@@ -207,17 +227,29 @@ function selectMapNode(floorIdx, nodeIdx) {
   // Hide map before transitioning
   hideOverlays();
 
+  var act = gameState.act || 1;
+
   // Handle the node type
   switch (node.type) {
     case 'fight':
       var fightPool;
       var realFloor = floorIdx - 1; // Subtract 1 for start node
-      if (realFloor < 5) {
-        fightPool = FIGHT_POOLS_EASY;
-      } else if (realFloor < 10) {
-        fightPool = FIGHT_POOLS_MEDIUM;
+      if (act === 2) {
+        if (realFloor < 5) {
+          fightPool = FIGHT_POOLS_ACT2_EASY;
+        } else if (realFloor < 10) {
+          fightPool = FIGHT_POOLS_ACT2_MEDIUM;
+        } else {
+          fightPool = FIGHT_POOLS_ACT2_HARD;
+        }
       } else {
-        fightPool = FIGHT_POOLS_HARD;
+        if (realFloor < 5) {
+          fightPool = FIGHT_POOLS_EASY;
+        } else if (realFloor < 10) {
+          fightPool = FIGHT_POOLS_MEDIUM;
+        } else {
+          fightPool = FIGHT_POOLS_HARD;
+        }
       }
       var pool = fightPool[Math.floor(Math.random() * fightPool.length)];
       initCombat(pool);
@@ -234,6 +266,10 @@ function selectMapNode(floorIdx, nodeIdx) {
       } else {
         eliteEnemies = ['sentry', 'sentry', 'sentry'];
       }
+      // Act 2 elites get +20% HP bonus
+      if (act === 2) {
+        gameState._act2EliteHpBonus = true;
+      }
       initCombat(eliteEnemies);
       gameState.isEliteFight = true;
       break;
@@ -241,7 +277,22 @@ function selectMapNode(floorIdx, nodeIdx) {
       var bossCandidates = ['slime_boss', 'the_guardian', 'hexaghost'];
       var bosses = bossCandidates.filter(function(id) { return !!ENEMY_DATABASE[id]; });
       if (bosses.length === 0) bosses = ['jaw_worm'];
+
+      if (act === 2 && gameState.act1Boss) {
+        // Ensure different boss from Act 1
+        bosses = bosses.filter(function(id) { return id !== gameState.act1Boss; });
+        if (bosses.length === 0) {
+          bosses = bossCandidates.filter(function(id) { return !!ENEMY_DATABASE[id]; });
+        }
+      }
+
       var bossId = bosses[Math.floor(Math.random() * bosses.length)];
+
+      // Track the boss for act transition
+      if (act === 1) {
+        gameState.act1Boss = bossId;
+      }
+
       initCombat([bossId]);
       gameState.isBossFight = true;
       break;
@@ -279,14 +330,56 @@ function returnToMap() {
   saveGame();
   gameState.isEliteFight = false;
   gameState.isBossFight = false;
+  gameState._act2EliteHpBonus = false;
 
   // Check if all floors cleared (boss beaten)
-  if (gameState.map.currentFloor >= MAP_CONFIG.floors - 1) {
-    gameState.phase = 'victory';
-    showGameOverScreen(true);
-    return;
+  if (gameState.map.currentFloor >= MAP_CONFIG.floors) {
+    var act = gameState.act || 1;
+    if (act === 1) {
+      // Transition to Act 2
+      showActTransition();
+      return;
+    } else {
+      // True victory after Act 2 boss
+      gameState.phase = 'victory';
+      showGameOverScreen(true);
+      return;
+    }
   }
 
+  renderCombat();
+  showMapScreen();
+}
+
+function showActTransition() {
+  gameState.phase = 'actTransition';
+  hideOverlays();
+
+  var screen = document.getElementById('act-transition');
+  if (screen) {
+    screen.classList.remove('hidden');
+
+    setTimeout(function() {
+      screen.classList.add('hidden');
+      transitionToAct2();
+    }, 2500);
+  } else {
+    transitionToAct2();
+  }
+}
+
+function transitionToAct2() {
+  gameState.act = 2;
+  gameState.map = generateMap(2);
+  gameState.isEliteFight = false;
+  gameState.isBossFight = false;
+
+  // Apply Act 2 visual theme
+  var container = document.getElementById('game-container');
+  if (container) container.classList.add('act-2');
+
+  gameState.phase = 'map';
+  saveGame();
   renderCombat();
   showMapScreen();
 }
