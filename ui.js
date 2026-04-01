@@ -1,5 +1,8 @@
 // === UI RENDERING ===
 
+// Track enemies that have already had their death animation played
+var _dyingEnemyIds = {};
+
 function _renderCombat() {
   renderEnemies();
   renderHand();
@@ -18,10 +21,25 @@ function renderEnemies() {
   var area = document.getElementById('enemy-area');
   area.innerHTML = '';
 
+  // Reset dying tracker when starting fresh combat (no dead enemies)
+  var anyDead = false;
+  for (var d = 0; d < gameState.enemies.length; d++) {
+    if (gameState.enemies[d].dead) { anyDead = true; break; }
+  }
+  if (!anyDead) _dyingEnemyIds = {};
+
   for (var i = 0; i < gameState.enemies.length; i++) {
     var enemy = gameState.enemies[i];
     var slot = document.createElement('div');
-    slot.className = 'enemy-slot' + (enemy.dead ? ' defeated' : '');
+    // Determine if this enemy just died (needs dying animation)
+    var enemyUid = (enemy.name || '') + '_' + i;
+    var justDied = enemy.dead && !_dyingEnemyIds[enemyUid];
+    if (justDied) {
+      _dyingEnemyIds[enemyUid] = true;
+      slot.className = 'enemy-slot dying';
+    } else {
+      slot.className = 'enemy-slot' + (enemy.dead ? ' defeated' : '');
+    }
     slot.setAttribute('data-enemy-index', i);
 
     // Intent
@@ -30,6 +48,9 @@ function renderEnemies() {
       intent.className = 'enemy-intent intent-' + enemy.currentIntent.type;
       var intentIcon = getIntentIcon(enemy.currentIntent.type);
       intent.textContent = intentIcon + ' ' + enemy.currentIntent.label;
+      // Intent tooltip
+      var intentTip = getIntentTooltip(enemy.currentIntent);
+      intent.title = intentTip;
       slot.appendChild(intent);
     }
 
@@ -260,6 +281,16 @@ function renderPlayerStats() {
   hpFill.style.width = hpPercent + '%';
   hpFill.className = 'hp-bar-fill' + (hpPercent < 30 ? ' low' : hpPercent < 60 ? ' medium' : '');
 
+  // Critical HP flash
+  var hpBarContainer = document.getElementById('player-hp').querySelector('.hp-bar-container');
+  if (hpBarContainer) {
+    if (hpPercent < 25) {
+      hpFill.classList.add('critical');
+    } else {
+      hpFill.classList.remove('critical');
+    }
+  }
+
   var hpText = document.getElementById('player-hp-text');
   hpText.textContent = player.currentHp + '/' + player.maxHp;
 
@@ -314,7 +345,23 @@ function renderPotions() {
     if (potion) {
       slot.classList.add('has-potion');
       slot.textContent = POTION_DATABASE[potion.id].art;
-      slot.title = potion.name + ': ' + potion.description;
+      // Custom tooltip on hover
+      (function(potionData, potionEl) {
+        potionEl.addEventListener('mouseenter', function() {
+          var tooltip = document.getElementById('tooltip');
+          if (!tooltip) return;
+          tooltip.textContent = potionData.name + ': ' + potionData.description;
+          tooltip.style.display = 'block';
+          var rect = potionEl.getBoundingClientRect();
+          var containerRect = document.getElementById('game-container').getBoundingClientRect();
+          tooltip.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+          tooltip.style.top = (rect.top - containerRect.top - 30) + 'px';
+        });
+        potionEl.addEventListener('mouseleave', function() {
+          var tooltip = document.getElementById('tooltip');
+          if (tooltip) tooltip.style.display = 'none';
+        });
+      })(potion, slot);
 
       if (gameState.phase === 'playerTurn') {
         (function(idx) {
@@ -353,7 +400,23 @@ function renderRelics() {
     var el = document.createElement('div');
     el.className = 'relic-icon';
     el.textContent = relic.art;
-    el.title = relic.name + ': ' + relic.description;
+    // Custom tooltip on hover
+    (function(relicData, relicEl) {
+      relicEl.addEventListener('mouseenter', function() {
+        var tooltip = document.getElementById('tooltip');
+        if (!tooltip) return;
+        tooltip.textContent = relicData.name + ': ' + relicData.description;
+        tooltip.style.display = 'block';
+        var rect = relicEl.getBoundingClientRect();
+        var containerRect = document.getElementById('game-container').getBoundingClientRect();
+        tooltip.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+        tooltip.style.top = (rect.bottom - containerRect.top + 5) + 'px';
+      });
+      relicEl.addEventListener('mouseleave', function() {
+        var tooltip = document.getElementById('tooltip');
+        if (tooltip) tooltip.style.display = 'none';
+      });
+    })(relic, el);
     bar.appendChild(el);
   }
 }
@@ -445,6 +508,19 @@ function _showFloatingOnPlayer(text, type) {
       avatar.classList.add('hit');
     }
   }
+
+  if (type === 'block') {
+    var shieldEl = document.createElement('div');
+    shieldEl.className = 'block-flash';
+    shieldEl.textContent = '\uD83D\uDEE1\uFE0F';
+    shieldEl.style.left = (rect.left - containerRect.left + rect.width / 2 - 16) + 'px';
+    shieldEl.style.top = (rect.top - containerRect.top - 10) + 'px';
+    var container = document.getElementById('game-container');
+    container.appendChild(shieldEl);
+    setTimeout(function() {
+      if (shieldEl.parentNode) shieldEl.parentNode.removeChild(shieldEl);
+    }, 500);
+  }
 }
 
 function createFloatingNumber(x, y, text, type) {
@@ -489,7 +565,7 @@ function _showRewardScreen() {
 
 function createRewardCardElement(card) {
   var el = document.createElement('div');
-  el.className = 'card type-' + card.type +
+  el.className = 'card type-' + card.type + ' reward-card' +
     (card.upgraded ? ' upgraded' : '');
 
   var cost = document.createElement('div');
@@ -596,6 +672,22 @@ function getIntentIcon(type) {
   }
 }
 
+function getIntentTooltip(intent) {
+  switch (intent.type) {
+    case 'attack':
+      var dmgMatch = intent.label.match(/(\d+)/);
+      return dmgMatch ? 'Attack for ' + dmgMatch[1] + ' damage' : 'Will attack';
+    case 'defend':
+      return 'Will gain Block';
+    case 'buff':
+      return 'Will buff itself';
+    case 'debuff':
+      return 'Will apply a debuff';
+    default:
+      return intent.label || 'Unknown action';
+  }
+}
+
 function getStatusIcon(status) {
   switch (status) {
     case 'vulnerable': return '💔';
@@ -603,6 +695,8 @@ function getStatusIcon(status) {
     case 'strength': return '💪';
     case 'enrage': return '🔥';
     case 'dexterity': return '🎯';
+    case 'frail': return '🥶';
+    case 'regen': return '🌱';
     default: return '';
   }
 }
@@ -614,6 +708,8 @@ function getStatusTooltip(status) {
     case 'strength': return 'Strength: Deals additional attack damage';
     case 'enrage': return 'Enrage: Gains Strength when player plays skills';
     case 'dexterity': return 'Dexterity: Additional Block from cards';
+    case 'frail': return 'Frail: Block from cards reduced by 25%';
+    case 'regen': return 'Regen: Heal N HP at start of turn';
     default: return '';
   }
 }
@@ -1184,6 +1280,25 @@ function showPileViewer(title, cards) {
 
   var container = document.getElementById('pile-viewer-cards');
   container.innerHTML = '';
+
+  // Deck statistics for "Your Deck"
+  if (title === 'Your Deck') {
+    var stats = { attack: 0, skill: 0, power: 0, curse: 0, status: 0, totalCost: 0 };
+    for (var si = 0; si < cards.length; si++) {
+      var cardType = cards[si].type;
+      stats[cardType] = (stats[cardType] || 0) + 1;
+      stats.totalCost += (typeof cards[si].cost === 'number' ? cards[si].cost : 0);
+    }
+    var avgCost = cards.length > 0 ? (stats.totalCost / cards.length).toFixed(1) : '0.0';
+    var statsDiv = document.createElement('div');
+    statsDiv.className = 'deck-stats';
+    var statsText = cards.length + ' cards | Avg cost: ' + avgCost;
+    statsText += '\nAttacks: ' + (stats.attack || 0) + ' | Skills: ' + (stats.skill || 0) + ' | Powers: ' + (stats.power || 0);
+    if (stats.curse > 0) statsText += ' | Curses: ' + stats.curse;
+    if (stats.status > 0) statsText += ' | Status: ' + stats.status;
+    statsDiv.textContent = statsText;
+    container.appendChild(statsDiv);
+  }
 
   // Sort alphabetically
   var sorted = cards.slice().sort(function(a, b) { return a.name.localeCompare(b.name); });

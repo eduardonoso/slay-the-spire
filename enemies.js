@@ -288,6 +288,147 @@ var ENEMY_DATABASE = {
         };
       }
     }
+  },
+  acid_slime_m: {
+    id: 'acid_slime_m',
+    name: 'Acid Slime',
+    sprite: '🟢',
+    maxHp: [28, 32],
+    getNextIntent: function(enemy, turnNumber) {
+      var pattern = turnNumber % 3;
+      if (pattern === 0) {
+        return {
+          type: 'attack',
+          label: 'Tackle',
+          effects: [{ type: 'damage', value: 10 }]
+        };
+      } else if (pattern === 1) {
+        return {
+          type: 'attack',
+          label: 'Corrosive',
+          effects: [{ type: 'damage', value: 8 }, { type: 'addStatusCard', card: 'slimed', count: 1 }]
+        };
+      } else {
+        return {
+          type: 'debuff',
+          label: 'Lick',
+          effects: [{ type: 'applyStatus', status: 'weak', value: 1 }]
+        };
+      }
+    }
+  },
+  spike_slime_m: {
+    id: 'spike_slime_m',
+    name: 'Spike Slime',
+    sprite: '🔴',
+    maxHp: [28, 32],
+    getNextIntent: function(enemy, turnNumber) {
+      if (turnNumber % 2 === 0) {
+        return {
+          type: 'attack',
+          label: 'Flame Tackle',
+          effects: [{ type: 'damage', value: 8 }, { type: 'applyStatus', status: 'frail', value: 1 }]
+        };
+      } else {
+        return {
+          type: 'debuff',
+          label: 'Lick',
+          effects: [{ type: 'applyStatus', status: 'weak', value: 1 }]
+        };
+      }
+    }
+  },
+  snecko: {
+    id: 'snecko',
+    name: 'Snecko',
+    sprite: '🐍',
+    maxHp: [46, 50],
+    getNextIntent: function(enemy, turnNumber) {
+      if (Math.random() < 0.7) {
+        return {
+          type: 'attack',
+          label: 'Tail Whip',
+          effects: [{ type: 'damage', value: 8 }, { type: 'applyStatus', status: 'vulnerable', value: 2 }]
+        };
+      } else {
+        return {
+          type: 'attack',
+          label: 'Bite',
+          effects: [{ type: 'damage', value: 15 }]
+        };
+      }
+    }
+  },
+  book_of_stabbing: {
+    id: 'book_of_stabbing',
+    name: 'Book of Stabbing',
+    sprite: '📖',
+    maxHp: [160, 168],
+    getNextIntent: function(enemy, turnNumber) {
+      if (!enemy._stabCount) {
+        enemy._stabCount = 2;
+      }
+      var stabCount = enemy._stabCount;
+      var effects = [];
+      for (var i = 0; i < stabCount; i++) {
+        effects.push({ type: 'damage', value: 6 });
+      }
+      enemy._stabCount = stabCount + 1;
+      return {
+        type: 'attack',
+        label: 'Multi-Stab x' + stabCount,
+        effects: effects
+      };
+    }
+  },
+  the_guardian: {
+    id: 'the_guardian',
+    name: 'The Guardian',
+    sprite: '🗿',
+    maxHp: [240, 240],
+    getNextIntent: function(enemy, turnNumber) {
+      // Check for 50% HP threshold - gain 10 strength once
+      if (!enemy._enraged && enemy.currentHp <= enemy.maxHp / 2) {
+        enemy._enraged = true;
+        if (!enemy.statusEffects.strength) enemy.statusEffects.strength = 0;
+        enemy.statusEffects.strength += 10;
+        log('The Guardian enters a rage! Strength +10!');
+      }
+      // Mode switch every 4 turns
+      var mode = Math.floor(turnNumber / 4) % 2;
+      var phase = turnNumber % 4;
+      if (mode === 0) {
+        // Offensive mode
+        if (phase % 2 === 0) {
+          return {
+            type: 'attack',
+            label: 'Fierce Bash',
+            effects: [{ type: 'damage', value: 32 }]
+          };
+        } else {
+          return {
+            type: 'defend',
+            label: 'Vent Steam',
+            effects: [{ type: 'block', value: 9 }]
+          };
+        }
+      } else {
+        // Defensive mode
+        if (phase % 2 === 0) {
+          return {
+            type: 'attack',
+            label: 'Whirlwind',
+            effects: [{ type: 'damage', value: 5 }, { type: 'damage', value: 5 }, { type: 'damage', value: 5 }, { type: 'damage', value: 5 }]
+          };
+        } else {
+          return {
+            type: 'buff',
+            label: 'Charge Up',
+            effects: [{ type: 'block', value: 9 }, { type: 'applyBuff', status: 'strength', value: 3 }]
+          };
+        }
+      }
+    }
   }
 };
 

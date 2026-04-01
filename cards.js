@@ -222,6 +222,99 @@ var CARD_DATABASE = {
     rarity: 'rare', needsTarget: false
   },
 
+  // === Phase 3: New cards ===
+  thunderclap: {
+    id: 'thunderclap', name: 'Thunderclap', type: 'attack', cost: 1, art: '⚡',
+    description: 'Deal 4 damage to ALL enemies. Apply 1 Vulnerable to ALL.',
+    effects: [{ type: 'damageAll', value: 4 }, { type: 'applyStatusAll', status: 'vulnerable', value: 1 }],
+    rarity: 'common', needsTarget: false
+  },
+  headbutt: {
+    id: 'headbutt', name: 'Headbutt', type: 'attack', cost: 1, art: '🤕',
+    description: 'Deal 9 damage. Put a card from discard on top of draw pile.',
+    effects: [{ type: 'damage', value: 9 }, { type: 'headbutt' }],
+    rarity: 'common', needsTarget: true
+  },
+  armaments: {
+    id: 'armaments', name: 'Armaments', type: 'skill', cost: 1, art: '🔧',
+    description: 'Gain 5 Block. Upgrade a random card in hand for this combat.',
+    effects: [{ type: 'block', value: 5 }, { type: 'tempUpgrade' }],
+    rarity: 'common', needsTarget: false
+  },
+  warcry: {
+    id: 'warcry', name: 'Warcry', type: 'skill', cost: 0, art: '📣',
+    description: 'Draw 2 cards. Put a card from hand on top of draw pile. Exhaust.',
+    effects: [{ type: 'drawCards', value: 2 }, { type: 'putBack' }],
+    rarity: 'common', needsTarget: false, exhaust: true
+  },
+  sentinel: {
+    id: 'sentinel', name: 'Sentinel', type: 'skill', cost: 1, art: '🛡️',
+    description: 'Gain 5 Block. If Exhausted, gain 2 Energy.',
+    effects: [{ type: 'block', value: 5 }],
+    rarity: 'common', needsTarget: false,
+    onExhaust: { type: 'gainEnergy', value: 2 }
+  },
+  rampage: {
+    id: 'rampage', name: 'Rampage', type: 'attack', cost: 1, art: '🔨',
+    description: 'Deal 8 damage. Damage increases by 5 each play.',
+    effects: [{ type: 'rampage', value: 8, increment: 5 }],
+    rarity: 'uncommon', needsTarget: true
+  },
+  pummel: {
+    id: 'pummel', name: 'Pummel', type: 'attack', cost: 1, art: '👊',
+    description: 'Deal 2 damage 4 times.',
+    effects: [{ type: 'multiDamage', value: 2, hits: 4 }],
+    rarity: 'uncommon', needsTarget: true
+  },
+  disarm: {
+    id: 'disarm', name: 'Disarm', type: 'skill', cost: 1, art: '🚫',
+    description: 'Reduce enemy Strength by 2. Exhaust.',
+    effects: [{ type: 'reduceStrength', value: 2 }],
+    rarity: 'uncommon', needsTarget: true, exhaust: true
+  },
+  power_through: {
+    id: 'power_through', name: 'Power Through', type: 'skill', cost: 1, art: '💪',
+    description: 'Add 2 Wounds to hand. Gain 15 Block.',
+    effects: [{ type: 'addWounds', value: 2 }, { type: 'block', value: 15 }],
+    rarity: 'uncommon', needsTarget: false
+  },
+  shockwave: {
+    id: 'shockwave', name: 'Shockwave', type: 'skill', cost: 2, art: '🌊',
+    description: 'Apply 3 Weak and 3 Vulnerable to ALL enemies. Exhaust.',
+    effects: [{ type: 'applyStatusAll', status: 'weak', value: 3 }, { type: 'applyStatusAll', status: 'vulnerable', value: 3 }],
+    rarity: 'uncommon', needsTarget: false, exhaust: true
+  },
+  feel_no_pain: {
+    id: 'feel_no_pain', name: 'Feel No Pain', type: 'power', cost: 1, art: '😤',
+    description: 'Whenever a card is Exhausted, gain 3 Block.',
+    effects: [{ type: 'addPower', power: 'feelNoPain', value: 3 }],
+    rarity: 'uncommon', needsTarget: false
+  },
+  limit_break: {
+    id: 'limit_break', name: 'Limit Break', type: 'skill', cost: 1, art: '💥',
+    description: 'Double your Strength. Exhaust.',
+    effects: [{ type: 'limitBreak' }],
+    rarity: 'rare', needsTarget: false, exhaust: true
+  },
+  reaper: {
+    id: 'reaper', name: 'Reaper', type: 'attack', cost: 2, art: '💀',
+    description: 'Deal 4 damage to ALL enemies. Heal HP equal to unblocked damage dealt.',
+    effects: [{ type: 'reaper', value: 4 }],
+    rarity: 'rare', needsTarget: false
+  },
+  corruption: {
+    id: 'corruption', name: 'Corruption', type: 'power', cost: 3, art: '🖤',
+    description: 'Skills cost 0 but Exhaust when played.',
+    effects: [{ type: 'addPower', power: 'corruption', value: 1 }],
+    rarity: 'rare', needsTarget: false
+  },
+  impervious: {
+    id: 'impervious', name: 'Impervious', type: 'skill', cost: 2, art: '🏰',
+    description: 'Gain 30 Block. Exhaust.',
+    effects: [{ type: 'block', value: 30 }],
+    rarity: 'rare', needsTarget: false, exhaust: true
+  },
+
   // === Status cards (added by enemies) ===
   dazed: {
     id: 'dazed', name: 'Dazed', type: 'status', cost: 0, art: '💫',
@@ -272,9 +365,9 @@ var STARTER_DECK = [
 
 // Reward pool by rarity
 var REWARD_POOL = {
-  common: ['cleave', 'pommel_strike', 'shrug_it_off', 'anger', 'flex', 'clash', 'true_grit', 'body_slam', 'iron_wave', 'twin_strike', 'heavy_blade'],
-  uncommon: ['inflame', 'uppercut', 'offering', 'seeing_red', 'entrench', 'battle_trance', 'whirlwind', 'metallicize'],
-  rare: ['bludgeon', 'demon_form', 'barricade']
+  common: ['cleave', 'pommel_strike', 'shrug_it_off', 'anger', 'flex', 'clash', 'true_grit', 'body_slam', 'iron_wave', 'twin_strike', 'heavy_blade', 'thunderclap', 'headbutt', 'armaments', 'warcry', 'sentinel'],
+  uncommon: ['inflame', 'uppercut', 'offering', 'seeing_red', 'entrench', 'battle_trance', 'whirlwind', 'metallicize', 'rampage', 'pummel', 'disarm', 'power_through', 'shockwave', 'feel_no_pain'],
+  rare: ['bludgeon', 'demon_form', 'barricade', 'limit_break', 'reaper', 'corruption', 'impervious']
 };
 
 var _cardInstanceId = 0;

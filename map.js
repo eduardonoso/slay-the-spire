@@ -30,7 +30,8 @@ var FIGHT_POOLS_EASY = [
   ['jaw_worm'],
   ['red_louse', 'red_louse'],
   ['fungi_beast', 'fungi_beast'],
-  ['blue_slime', 'blue_slime']
+  ['blue_slime', 'blue_slime'],
+  ['acid_slime_m', 'spike_slime_m']
 ];
 
 var FIGHT_POOLS_MEDIUM = [
@@ -38,17 +39,20 @@ var FIGHT_POOLS_MEDIUM = [
   ['jaw_worm', 'red_louse'],
   ['blue_slime', 'blue_slime', 'blue_slime'],
   ['looter'],
-  ['fungi_beast', 'red_louse']
+  ['fungi_beast', 'red_louse'],
+  ['snecko'],
+  ['acid_slime_m', 'acid_slime_m']
 ];
 
 var FIGHT_POOLS_HARD = [
   ['cultist', 'red_louse'],
   ['jaw_worm', 'jaw_worm'],
   ['fungi_beast', 'red_louse', 'red_louse'],
-  ['looter', 'red_louse']
+  ['looter', 'red_louse'],
+  ['snecko', 'spike_slime_m']
 ];
 
-var ELITE_POOL = ['nob', 'lagavulin'];
+var ELITE_POOL = ['nob', 'lagavulin', 'book_of_stabbing'];
 
 function generateMap() {
   var floors = [];
@@ -221,10 +225,12 @@ function selectMapNode(floorIdx, nodeIdx) {
     case 'elite':
       var eliteRoll = Math.random();
       var eliteEnemies;
-      if (eliteRoll < 0.33) {
+      if (eliteRoll < 0.25) {
         eliteEnemies = ['nob'];
-      } else if (eliteRoll < 0.66) {
+      } else if (eliteRoll < 0.5) {
         eliteEnemies = ['lagavulin'];
+      } else if (eliteRoll < 0.75) {
+        eliteEnemies = ['book_of_stabbing'];
       } else {
         eliteEnemies = ['sentry', 'sentry', 'sentry'];
       }
@@ -232,7 +238,10 @@ function selectMapNode(floorIdx, nodeIdx) {
       gameState.isEliteFight = true;
       break;
     case 'boss':
-      var bossId = ENEMY_DATABASE['slime_boss'] ? 'slime_boss' : 'jaw_worm';
+      var bossCandidates = ['slime_boss', 'the_guardian', 'hexaghost'];
+      var bosses = bossCandidates.filter(function(id) { return !!ENEMY_DATABASE[id]; });
+      if (bosses.length === 0) bosses = ['jaw_worm'];
+      var bossId = bosses[Math.floor(Math.random() * bosses.length)];
       initCombat([bossId]);
       gameState.isBossFight = true;
       break;

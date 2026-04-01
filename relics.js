@@ -98,10 +98,50 @@ var RELIC_DATABASE = {
     id: 'letter_opener', name: 'Letter Opener', art: '✉️',
     description: 'Every 3 skills, deal 5 damage to all.',
     trigger: 'onSkillPlayed', counter: true
+  },
+  shuriken: {
+    id: 'shuriken', name: 'Shuriken', art: '⭐',
+    description: 'Every 3 attacks played, gain 1 Strength.',
+    trigger: 'onAttackPlayed', counter: true
+  },
+  du_vu_doll: {
+    id: 'du_vu_doll', name: 'Du-Vu Doll', art: '🪆',
+    description: '+1 Strength for each Curse in deck.',
+    trigger: 'onCombatStart'
+  },
+  centennial_puzzle: {
+    id: 'centennial_puzzle', name: 'Centennial Puzzle', art: '🧩',
+    description: 'First time you lose HP each combat, draw 3.',
+    trigger: 'onLoseHP'
+  },
+  self_forming_clay: {
+    id: 'self_forming_clay', name: 'Self-Forming Clay', art: '🏺',
+    description: 'Whenever you lose HP, gain 3 Block next turn.',
+    trigger: 'onLoseHP'
+  },
+  torii: {
+    id: 'torii', name: 'Torii', art: '⛩️',
+    description: 'Receive 5 or less attack damage? Reduce to 1.',
+    trigger: 'onDamageReceived'
+  },
+  snecko_eye: {
+    id: 'snecko_eye', name: 'Snecko Eye', art: '👁️',
+    description: 'Draw 2 extra cards. Card costs randomized 0-3.',
+    trigger: 'onTurnStart'
+  },
+  dead_branch: {
+    id: 'dead_branch', name: 'Dead Branch', art: '🌿',
+    description: 'Exhaust a card? Add random card to hand.',
+    trigger: 'onExhaust'
+  },
+  ice_cream: {
+    id: 'ice_cream', name: 'Ice Cream', art: '🍦',
+    description: 'Energy carries over between turns.',
+    trigger: 'passive'
   }
 };
 
-var RELIC_POOL = ['burning_blood', 'vajra', 'anchor', 'bag_of_preparation', 'lantern', 'orichalcum', 'pen_nib', 'meat_on_bone', 'red_skull', 'blood_vial', 'preserved_insect', 'mango', 'strawberry', 'nunchaku', 'ornamental_fan', 'kunai', 'happy_flower', 'oddly_smooth_stone', 'horn_cleat', 'letter_opener'];
+var RELIC_POOL = ['burning_blood', 'vajra', 'anchor', 'bag_of_preparation', 'lantern', 'orichalcum', 'pen_nib', 'meat_on_bone', 'red_skull', 'blood_vial', 'preserved_insect', 'mango', 'strawberry', 'nunchaku', 'ornamental_fan', 'kunai', 'happy_flower', 'oddly_smooth_stone', 'horn_cleat', 'letter_opener', 'shuriken', 'du_vu_doll', 'centennial_puzzle', 'self_forming_clay', 'torii', 'snecko_eye', 'dead_branch', 'ice_cream'];
 
 function getRandomRelics(count) {
   var available = RELIC_POOL.filter(function(id) {
@@ -251,6 +291,43 @@ function triggerRelics(triggerPoint, context) {
           }
         }
         break;
+      case 'shuriken':
+        if (!gameState.player.relicCounters) gameState.player.relicCounters = {};
+        gameState.player.relicCounters.shuriken = (gameState.player.relicCounters.shuriken || 0) + 1;
+        if (gameState.player.relicCounters.shuriken >= 3) {
+          gameState.player.relicCounters.shuriken = 0;
+          gameState.player.statusEffects.strength = (gameState.player.statusEffects.strength || 0) + 1;
+          log('Shuriken grants +1 Strength!');
+        }
+        break;
+      case 'du_vu_doll':
+        var curseCount = 0;
+        for (var dvi = 0; dvi < gameState.player.deck.length; dvi++) {
+          if (gameState.player.deck[dvi].type === 'curse') curseCount++;
+        }
+        if (curseCount > 0) {
+          gameState.player.statusEffects.strength = (gameState.player.statusEffects.strength || 0) + curseCount;
+          log('Du-Vu Doll grants +' + curseCount + ' Strength!');
+        }
+        break;
+      case 'centennial_puzzle':
+        if (!gameState.centennialUsed) {
+          gameState.centennialUsed = true;
+          drawCards(3);
+          log('Centennial Puzzle draws 3 cards!');
+        }
+        break;
+      case 'self_forming_clay':
+        gameState.player._selfFormingClayTriggered = true;
+        break;
+      case 'snecko_eye':
+        drawCards(2);
+        // Randomize costs handled in startPlayerTurn after drawing
+        break;
     }
   }
+}
+
+function hasRelic(relicId) {
+  return gameState.player.relics.indexOf(relicId) !== -1;
 }

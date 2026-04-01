@@ -103,7 +103,22 @@ var UPGRADE_DATABASE = {
   demon_form: { name: 'Demon Form+', description: 'At start of turn, gain 3 Strength.', effects: [{ type: 'addPower', power: 'demon_form', value: 3 }] },
   barricade: { name: 'Barricade+', description: 'Block no longer expires. Costs 2.', cost: 2, effects: [{ type: 'addPower', power: 'barricade', value: 1 }] },
   true_grit: { name: 'True Grit+', description: 'Gain 9 Block. Exhaust a random card.', effects: [{ type: 'block', value: 9 }, { type: 'exhaustRandom' }] },
-  seeing_red: { name: 'Seeing Red+', description: 'Gain 3 Energy. Exhaust.', effects: [{ type: 'gainEnergy', value: 3 }] }
+  seeing_red: { name: 'Seeing Red+', description: 'Gain 3 Energy. Exhaust.', effects: [{ type: 'gainEnergy', value: 3 }] },
+  thunderclap: { name: 'Thunderclap+', description: 'Deal 7 damage to ALL. Apply 1 Vulnerable to ALL.', effects: [{ type: 'damageAll', value: 7 }, { type: 'applyStatusAll', status: 'vulnerable', value: 1 }] },
+  headbutt: { name: 'Headbutt+', description: 'Deal 12 damage. Put a card from discard on top of draw pile.', effects: [{ type: 'damage', value: 12 }, { type: 'headbutt' }] },
+  armaments: { name: 'Armaments+', description: 'Gain 5 Block. Upgrade ALL cards in hand for this combat.', effects: [{ type: 'block', value: 5 }, { type: 'tempUpgradeAll' }] },
+  warcry: { name: 'Warcry+', description: 'Draw 3 cards. Put a card from hand on top of draw pile. Exhaust.', effects: [{ type: 'drawCards', value: 3 }, { type: 'putBack' }] },
+  sentinel: { name: 'Sentinel+', description: 'Gain 8 Block. If Exhausted, gain 3 Energy.', effects: [{ type: 'block', value: 8 }], onExhaust: { type: 'gainEnergy', value: 3 } },
+  rampage: { name: 'Rampage+', description: 'Deal 8 damage. Damage increases by 8 each play.', effects: [{ type: 'rampage', value: 8, increment: 8 }] },
+  pummel: { name: 'Pummel+', description: 'Deal 2 damage 5 times.', effects: [{ type: 'multiDamage', value: 2, hits: 5 }] },
+  disarm: { name: 'Disarm+', description: 'Reduce enemy Strength by 3. Exhaust.', effects: [{ type: 'reduceStrength', value: 3 }] },
+  power_through: { name: 'Power Through+', description: 'Add 2 Wounds to hand. Gain 20 Block.', effects: [{ type: 'addWounds', value: 2 }, { type: 'block', value: 20 }] },
+  shockwave: { name: 'Shockwave+', description: 'Apply 5 Weak and 5 Vulnerable to ALL. Exhaust.', effects: [{ type: 'applyStatusAll', status: 'weak', value: 5 }, { type: 'applyStatusAll', status: 'vulnerable', value: 5 }] },
+  feel_no_pain: { name: 'Feel No Pain+', description: 'Whenever a card is Exhausted, gain 4 Block.', effects: [{ type: 'addPower', power: 'feelNoPain', value: 4 }] },
+  limit_break: { name: 'Limit Break+', description: 'Double your Strength.', effects: [{ type: 'limitBreak' }], exhaust: false },
+  reaper: { name: 'Reaper+', description: 'Deal 5 damage to ALL. Heal HP equal to unblocked damage.', effects: [{ type: 'reaper', value: 5 }] },
+  corruption: { name: 'Corruption+', description: 'Skills cost 0 but Exhaust. Costs 2.', cost: 2, effects: [{ type: 'addPower', power: 'corruption', value: 1 }] },
+  impervious: { name: 'Impervious+', description: 'Gain 40 Block. Exhaust.', effects: [{ type: 'block', value: 40 }] }
 };
 
 function upgradeCard(cardInstance) {
@@ -115,6 +130,8 @@ function upgradeCard(cardInstance) {
   cardInstance.description = upgrade.description;
   cardInstance.effects = upgrade.effects;
   if (upgrade.cost !== undefined) cardInstance.cost = upgrade.cost;
+  if (upgrade.onExhaust !== undefined) cardInstance.onExhaust = upgrade.onExhaust;
+  if (upgrade.exhaust !== undefined) cardInstance.exhaust = upgrade.exhaust;
   return true;
 }
 

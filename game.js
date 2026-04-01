@@ -82,6 +82,8 @@ function initCombat(enemyIds) {
 
   gameState.player._redSkullActive = false;
   gameState.player.penNibActive = false;
+  gameState.centennialUsed = false;
+  gameState.player._selfFormingClayTriggered = false;
 
   triggerRelics('onCombatStart');
 
@@ -118,11 +120,34 @@ function startPlayerTurn() {
   gameState.stats.turnsPlayed++;
   gameState.phase = 'playerTurn';
   if (typeof showTurnBanner === 'function') showTurnBanner('Your Turn', 'player-turn');
-  gameState.player.energy = gameState.player.maxEnergy;
+  // Ice Cream: energy carries over (add maxEnergy instead of resetting)
+  if (hasRelic('ice_cream')) {
+    gameState.player.energy += gameState.player.maxEnergy;
+  } else {
+    gameState.player.energy = gameState.player.maxEnergy;
+  }
   if (!gameState.player.powers.barricade) {
     gameState.player.block = 0;
   }
+
+  // Self-Forming Clay: gain 3 block if triggered last turn
+  if (gameState.player._selfFormingClayTriggered) {
+    gameState.player.block += 3;
+    showFloatingOnPlayer('+3', 'block');
+    log('Self-Forming Clay grants 3 Block.');
+    gameState.player._selfFormingClayTriggered = false;
+  }
+
   gameState.selectedCard = null;
+
+  // Regen: heal at start of turn, then decrement
+  if (gameState.player.statusEffects.regen > 0) {
+    var regenAmt = gameState.player.statusEffects.regen;
+    gameState.player.currentHp = Math.min(gameState.player.maxHp, gameState.player.currentHp + regenAmt);
+    showFloatingOnPlayer('+' + regenAmt, 'heal');
+    log('Regen heals ' + regenAmt + ' HP.');
+    if (typeof AudioManager !== 'undefined' && AudioManager.enabled) AudioManager.playHealSound();
+  }
 
   // Tick down player status effects
   tickStatusEffects(gameState.player);
@@ -149,6 +174,16 @@ function startPlayerTurn() {
 
   // Draw cards
   drawCards(gameState.handSize);
+
+  // Snecko Eye: randomize all hand card costs 0-3
+  if (hasRelic('snecko_eye')) {
+    for (var si = 0; si < gameState.player.hand.length; si++) {
+      var sCard = gameState.player.hand[si];
+      if (sCard.cost !== undefined && sCard.cost !== 'X' && sCard.playable !== false) {
+        sCard.cost = Math.floor(Math.random() * 4);
+      }
+    }
+  }
 
   // Curse triggers (after drawing)
   for (var ci = 0; ci < gameState.player.hand.length; ci++) {
@@ -182,16 +217,46 @@ function endPlayerTurn() {
     var c = gameState.player.hand[i];
     if (c.ethereal) {
       gameState.player.exhaustPile.push(c);
+      // Trigger onExhaust if the ethereal card has one
+      if (c.onExhaust) {
+        resolveEffect(c.onExhaust, gameState.player, null, c, 0);
+      }
+      // Feel No Pain trigger
+      if (gameState.player.powers.feelNoPain) {
+        gameState.player.block += gameState.player.powers.feelNoPain;
+      }
+      // Dead Branch: add random card (will be discarded at end of turn)
+      if (hasRelic('dead_branch')) {
+        var dbKeysE = Object.keys(CARD_DATABASE);
+        var dbValidE = [];
+        for (var dbiE = 0; dbiE < dbKeysE.length; dbiE++) {
+          var dbCardE = CARD_DATABASE[dbKeysE[dbiE]];
+          if (dbCardE.type !== 'curse' && dbCardE.type !== 'status' && dbCardE.playable !== false) {
+            dbValidE.push(dbKeysE[dbiE]);
+          }
+        }
+        if (dbValidE.length > 0) {
+          var dbRandE = dbValidE[Math.floor(Math.random() * dbValidE.length)];
+          var dbNewE = createCardInstance(dbRandE);
+          nonEthereal.push(dbNewE);
+        }
+      }
     } else {
       nonEthereal.push(c);
     }
   }
   gameState.player.hand = nonEthereal;
 
-  // Discard remaining hand
-  while (gameState.player.hand.length > 0) {
-    gameState.player.discardPile.push(gameState.player.hand.pop());
+  // Discard remaining hand (retain cards stay)
+  var retainedCards = [];
+  for (var ri = 0; ri < gameState.player.hand.length; ri++) {
+    if (gameState.player.hand[ri].retain) {
+      retainedCards.push(gameState.player.hand[ri]);
+    } else {
+      gameState.player.discardPile.push(gameState.player.hand[ri]);
+    }
   }
+  gameState.player.hand = retainedCards;
 
   // Remove temp buffs
   var player = gameState.player;
@@ -285,10 +350,18 @@ function playCard(instanceId, targetIndex) {
   var card = gameState.player.hand[cardIndex];
   if (card.playable === false) return;
   if (card.playCondition && !card.playCondition(gameState.player.hand)) return;
-  if (card.cost !== 'X' && gameState.player.energy < card.cost) return;
+  // Corruption makes skills cost 0
+  var effectiveCost = card.cost;
+  if (gameState.player.powers.corruption && card.type === 'skill' && card.cost !== 'X') {
+    effectiveCost = 0;
+  }
+  if (effectiveCost !== 'X' && gameState.player.energy < effectiveCost) return;
 
-  var energySpent = card.cost;
+  var energySpent = effectiveCost;
   if (card.cost === 'X') { energySpent = gameState.player.energy; }
+
+  // Corruption: Skills cost 0 and exhaust
+  var corruptionActive = gameState.player.powers.corruption && card.type === 'skill';
 
   var target = null;
   if (card.needsTarget) {
@@ -308,9 +381,40 @@ function playCard(instanceId, targetIndex) {
     resolveEffect(card.effects[e], gameState.player, target, card, energySpent);
   }
 
+  // Determine if card should exhaust
+  var shouldExhaust = card.exhaust || corruptionActive;
+
   // Move to discard or exhaust
-  if (card.exhaust) {
+  if (shouldExhaust) {
     gameState.player.exhaustPile.push(card);
+    // Trigger onExhaust effect if card has one
+    if (card.onExhaust) {
+      resolveEffect(card.onExhaust, gameState.player, null, card, 0);
+      log(card.name + ' triggers on-exhaust effect!');
+    }
+    // Feel No Pain: gain block when a card is exhausted
+    if (gameState.player.powers.feelNoPain) {
+      var fnpBlock = gameState.player.powers.feelNoPain;
+      gameState.player.block += fnpBlock;
+      showFloatingOnPlayer('+' + fnpBlock, 'block');
+    }
+    // Dead Branch: add random card to hand on exhaust
+    if (hasRelic('dead_branch')) {
+      var dbKeys = Object.keys(CARD_DATABASE);
+      var dbValid = [];
+      for (var dbi = 0; dbi < dbKeys.length; dbi++) {
+        var dbCard = CARD_DATABASE[dbKeys[dbi]];
+        if (dbCard.type !== 'curse' && dbCard.type !== 'status' && dbCard.playable !== false) {
+          dbValid.push(dbKeys[dbi]);
+        }
+      }
+      if (dbValid.length > 0) {
+        var dbRandId = dbValid[Math.floor(Math.random() * dbValid.length)];
+        var dbNewCard = createCardInstance(dbRandId);
+        gameState.player.hand.push(dbNewCard);
+        log('Dead Branch adds ' + dbNewCard.name + ' to hand!');
+      }
+    }
   } else {
     gameState.player.discardPile.push(card);
   }
@@ -379,6 +483,9 @@ function resolveEffect(effect, source, target, card, energySpent) {
     case 'block':
       var blockAmount = effect.value + (source.statusEffects.dexterity || 0);
       blockAmount = Math.max(0, blockAmount);
+      if (source.statusEffects.frail > 0) {
+        blockAmount = Math.floor(blockAmount * 0.75);
+      }
       source.block += blockAmount;
       if (source === gameState.player) {
         showFloatingOnPlayer('+' + blockAmount, 'block');
@@ -484,6 +591,34 @@ function resolveEffect(effect, source, target, card, energySpent) {
         var removed = hand.splice(ri, 1)[0];
         gameState.player.exhaustPile.push(removed);
         log('Exhausted ' + removed.name + '.');
+        // Trigger onExhaust if the exhausted card has one
+        if (removed.onExhaust) {
+          resolveEffect(removed.onExhaust, gameState.player, null, removed, 0);
+          log(removed.name + ' triggers on-exhaust effect!');
+        }
+        // Feel No Pain trigger
+        if (gameState.player.powers.feelNoPain) {
+          var fnpBlock2 = gameState.player.powers.feelNoPain;
+          gameState.player.block += fnpBlock2;
+          showFloatingOnPlayer('+' + fnpBlock2, 'block');
+        }
+        // Dead Branch: add random card to hand on exhaust
+        if (hasRelic('dead_branch')) {
+          var dbKeys2 = Object.keys(CARD_DATABASE);
+          var dbValid2 = [];
+          for (var dbi2 = 0; dbi2 < dbKeys2.length; dbi2++) {
+            var dbCard2 = CARD_DATABASE[dbKeys2[dbi2]];
+            if (dbCard2.type !== 'curse' && dbCard2.type !== 'status' && dbCard2.playable !== false) {
+              dbValid2.push(dbKeys2[dbi2]);
+            }
+          }
+          if (dbValid2.length > 0) {
+            var dbRandId2 = dbValid2[Math.floor(Math.random() * dbValid2.length)];
+            var dbNewCard2 = createCardInstance(dbRandId2);
+            gameState.player.hand.push(dbNewCard2);
+            log('Dead Branch adds ' + dbNewCard2.name + ' to hand!');
+          }
+        }
       }
       break;
 
@@ -503,6 +638,113 @@ function resolveEffect(effect, source, target, card, energySpent) {
 
     case 'addPower':
       gameState.player.powers[effect.power] = (gameState.player.powers[effect.power] || 0) + effect.value;
+      break;
+
+    case 'applyStatusAll':
+      for (var sa = 0; sa < gameState.enemies.length; sa++) {
+        var sae = gameState.enemies[sa];
+        if (!sae.dead) {
+          sae.statusEffects[effect.status] = (sae.statusEffects[effect.status] || 0) + effect.value;
+        }
+      }
+      break;
+
+    case 'headbutt':
+      if (gameState.player.discardPile.length > 0) {
+        var hbIdx = Math.floor(Math.random() * gameState.player.discardPile.length);
+        var hbCard = gameState.player.discardPile.splice(hbIdx, 1)[0];
+        gameState.player.drawPile.push(hbCard);
+        log('Put ' + hbCard.name + ' on top of draw pile.');
+      }
+      break;
+
+    case 'tempUpgrade':
+      var upgradeable = [];
+      for (var tu = 0; tu < gameState.player.hand.length; tu++) {
+        var tuCard = gameState.player.hand[tu];
+        if (!tuCard.upgraded && UPGRADE_DATABASE && UPGRADE_DATABASE[tuCard.id]) {
+          upgradeable.push(tuCard);
+        }
+      }
+      if (upgradeable.length > 0) {
+        var tuTarget = upgradeable[Math.floor(Math.random() * upgradeable.length)];
+        upgradeCard(tuTarget);
+        log('Upgraded ' + tuTarget.name + '!');
+      }
+      break;
+
+    case 'tempUpgradeAll':
+      for (var tua = 0; tua < gameState.player.hand.length; tua++) {
+        var tuaCard = gameState.player.hand[tua];
+        if (!tuaCard.upgraded && typeof UPGRADE_DATABASE !== 'undefined' && UPGRADE_DATABASE[tuaCard.id]) {
+          upgradeCard(tuaCard);
+        }
+      }
+      log('Upgraded all cards in hand!');
+      break;
+
+    case 'putBack':
+      var pbHand = gameState.player.hand;
+      if (pbHand.length > 0) {
+        var pbIdx = Math.floor(Math.random() * pbHand.length);
+        var pbCard = pbHand.splice(pbIdx, 1)[0];
+        gameState.player.drawPile.push(pbCard);
+        log('Put ' + pbCard.name + ' on top of draw pile.');
+      }
+      break;
+
+    case 'addWounds':
+      for (var aw = 0; aw < effect.value; aw++) {
+        var woundCard = createCardInstance('wound');
+        if (woundCard) {
+          gameState.player.hand.push(woundCard);
+        }
+      }
+      log('Added ' + effect.value + ' Wounds to hand.');
+      break;
+
+    case 'reduceStrength':
+      if (target) {
+        target.statusEffects.strength = (target.statusEffects.strength || 0) - effect.value;
+        log(target.name + ' loses ' + effect.value + ' Strength.');
+      }
+      break;
+
+    case 'limitBreak':
+      var currentStr = gameState.player.statusEffects.strength || 0;
+      gameState.player.statusEffects.strength = currentStr * 2;
+      log('Strength doubled to ' + gameState.player.statusEffects.strength + '!');
+      break;
+
+    case 'reaper':
+      var totalHealed = 0;
+      for (var rp = 0; rp < gameState.enemies.length; rp++) {
+        var rpEnemy = gameState.enemies[rp];
+        if (!rpEnemy.dead) {
+          var rpDmg = calculateDamage(effect.value, source, rpEnemy);
+          var rpResult = applyDamage(rpDmg, rpEnemy);
+          showDamageOnEnemy(rpEnemy, rpResult.hpLoss);
+          totalHealed += rpResult.hpLoss;
+        }
+      }
+      if (totalHealed > 0) {
+        gameState.player.currentHp = Math.min(gameState.player.maxHp, gameState.player.currentHp + totalHealed);
+        showFloatingOnPlayer('+' + totalHealed, 'heal');
+        log('Healed ' + totalHealed + ' HP from Reaper.');
+      }
+      break;
+
+    case 'rampage':
+      if (target) {
+        var rampageBonus = card ? (card._rampageDamage || 0) : 0;
+        var rampageDmg = calculateDamage(effect.value + rampageBonus, source, target);
+        var rampageResult = applyDamage(rampageDmg, target);
+        showDamageOnEnemy(target, rampageResult.hpLoss);
+        if (rampageResult.hpLoss >= 10) triggerScreenShake();
+        if (card) {
+          card._rampageDamage = rampageBonus + (effect.increment || 5);
+        }
+      }
       break;
   }
 }
@@ -527,6 +769,12 @@ function applyDamage(damage, target) {
   var blocked = Math.min(target.block, damage);
   target.block -= blocked;
   var hpLoss = damage - blocked;
+
+  // Torii: reduce unblocked damage of 2-5 to 1
+  if (target === gameState.player && hasRelic('torii')) {
+    if (hpLoss >= 2 && hpLoss <= 5) hpLoss = 1;
+  }
+
   target.currentHp -= hpLoss;
   if (hpLoss > 0 && typeof AudioManager !== 'undefined' && AudioManager.enabled) AudioManager.playDamageSound(hpLoss);
 
@@ -536,6 +784,11 @@ function applyDamage(damage, target) {
     } else {
       gameState.stats.damageDealt += hpLoss;
     }
+  }
+
+  // Trigger onLoseHP relics when player takes HP damage
+  if (target === gameState.player && hpLoss > 0) {
+    triggerRelics('onLoseHP', { amount: hpLoss });
   }
 
   // Check for boss split mechanic (before death check)
