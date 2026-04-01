@@ -11,7 +11,8 @@ var NODE_TYPES = {
   shop: { icon: '\uD83D\uDCB0', label: 'Shop' },
   event: { icon: '\u2753', label: 'Event' },
   treasure: { icon: '\uD83D\uDC8E', label: 'Treasure' },
-  boss: { icon: '\uD83D\uDC80', label: 'Boss' }
+  boss: { icon: '\uD83D\uDC80', label: 'Boss' },
+  start: { icon: '\uD83E\uDDD9', label: 'Start' }
 };
 
 // Normal enemy pools for map fights
@@ -104,17 +105,44 @@ function generateMap() {
     }
   }
 
-  // Mark first floor as available
+  // Insert start node at floor 0, shift everything else up
+  // Collect which nodes on current floor 0 are reachable (have outgoing connections)
+  var startConnections = [];
   for (var n3 = 0; n3 < floors[0].length; n3++) {
     if (floors[0][n3].connections.length > 0) {
-      floors[0][n3].available = true;
+      startConnections.push(n3);
     }
+  }
+
+  // Create start floor with a single node
+  var startFloor = [{
+    type: 'start',
+    x: 0,
+    floor: 0,
+    connections: startConnections,
+    visited: true,
+    available: false
+  }];
+
+  // Insert start floor at position 0
+  floors.unshift(startFloor);
+
+  // Update floor indices for all nodes
+  for (var fi = 0; fi < floors.length; fi++) {
+    for (var ni2 = 0; ni2 < floors[fi].length; ni2++) {
+      floors[fi][ni2].floor = fi;
+    }
+  }
+
+  // Mark floor 1 nodes that start connects to as available
+  for (var sc = 0; sc < startConnections.length; sc++) {
+    floors[1][startConnections[sc]].available = true;
   }
 
   return {
     floors: floors,
-    currentFloor: -1,
-    currentNode: -1
+    currentFloor: 0,
+    currentNode: 0
   };
 }
 
@@ -129,7 +157,8 @@ function hasPathTo(floors, floorIdx, nodeIdx) {
 }
 
 function getNodeType(floor) {
-  if (floor === 0) return 'fight'; // First floor always fight
+  // floor here is pre-start-insertion index (0 = first real floor)
+  if (floor === 0) return 'fight'; // First real floor always fight
   if (floor === MAP_CONFIG.floors - 2) return 'rest'; // Before boss always rest
   if (floor === MAP_CONFIG.floors - 1) return 'boss';
 
@@ -178,9 +207,10 @@ function selectMapNode(floorIdx, nodeIdx) {
   switch (node.type) {
     case 'fight':
       var fightPool;
-      if (floorIdx < 5) {
+      var realFloor = floorIdx - 1; // Subtract 1 for start node
+      if (realFloor < 5) {
         fightPool = FIGHT_POOLS_EASY;
-      } else if (floorIdx < 10) {
+      } else if (realFloor < 10) {
         fightPool = FIGHT_POOLS_MEDIUM;
       } else {
         fightPool = FIGHT_POOLS_HARD;

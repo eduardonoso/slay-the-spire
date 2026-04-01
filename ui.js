@@ -373,7 +373,7 @@ function renderCombatLog() {
 function renderEncounterInfo() {
   var el = document.getElementById('encounter-info');
   if (gameState.map) {
-    el.textContent = 'Floor ' + (gameState.map.currentFloor + 1) + ' / ' + MAP_CONFIG.floors;
+    el.textContent = 'Floor ' + gameState.map.currentFloor + ' / ' + MAP_CONFIG.floors;
   }
 }
 
@@ -554,7 +554,7 @@ function _showGameOverScreen(victory) {
   } else {
     title.textContent = 'Defeat';
     title.className = 'overlay-title defeat';
-    var floorText = gameState.map ? 'floor ' + (gameState.map.currentFloor + 1) : 'encounter ' + (gameState.encounterIndex + 1);
+    var floorText = gameState.map ? 'floor ' + gameState.map.currentFloor : 'encounter ' + (gameState.encounterIndex + 1);
     subtitle.textContent = 'You have been slain on ' + floorText + '.';
   }
 
@@ -645,7 +645,8 @@ function _showMapScreen() {
 
     var floorLabel = document.createElement('div');
     floorLabel.className = 'map-floor-label';
-    floorLabel.textContent = (f + 1);
+    // Floor 0 is the start node — don't number it
+    floorLabel.textContent = (f === 0) ? '' : f;
     floorDiv.appendChild(floorLabel);
 
     var nodesDiv = document.createElement('div');

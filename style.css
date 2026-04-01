@@ -37,7 +37,7 @@ body {
   justify-content: center;
   align-items: center;
   gap: clamp(15px, 3vw, 40px);
-  padding: 15px 10px;
+  padding: 30px 10px 15px;
 }
 
 .enemy-slot {
@@ -649,7 +649,7 @@ body {
 
 /* === MAP SCREEN === */
 #map-container {
-  max-height: 500px;
+  flex: 1;
   overflow-y: auto;
   padding: 10px;
 }
@@ -684,13 +684,15 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.05);
+  background: #1a1a2e;
   border: 2px solid #444;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   transition: all 0.2s;
+  position: relative;
+  z-index: 2;
 }
 
 .map-node.visited {
@@ -701,6 +703,7 @@ body {
 .map-node.current {
   border-color: #2ed573;
   box-shadow: 0 0 10px rgba(46,213,115,0.4);
+  opacity: 1;
 }
 
 .map-node.available {
