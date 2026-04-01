@@ -395,7 +395,12 @@ function getRandomRewardCards(count) {
   for (var i = 0; i < count; i++) {
     var roll = Math.random();
     var rarity;
-    if (act >= 2) {
+    if (act >= 3) {
+      // Act 3: heavily favor uncommon and rare cards
+      if (roll < 0.20) rarity = 'common';
+      else if (roll < 0.65) rarity = 'uncommon';
+      else rarity = 'rare';
+    } else if (act >= 2) {
       // Act 2: favor uncommon and rare cards more
       if (roll < 0.35) rarity = 'common';
       else if (roll < 0.78) rarity = 'uncommon';
@@ -413,7 +418,11 @@ function getRandomRewardCards(count) {
     var attempts = 0;
     while (cards.some(function(c) { return c.id === cardId; }) && attempts < 10) {
       roll = Math.random();
-      if (act >= 2) {
+      if (act >= 3) {
+        if (roll < 0.20) rarity = 'common';
+        else if (roll < 0.65) rarity = 'uncommon';
+        else rarity = 'rare';
+      } else if (act >= 2) {
         if (roll < 0.35) rarity = 'common';
         else if (roll < 0.78) rarity = 'uncommon';
         else rarity = 'rare';

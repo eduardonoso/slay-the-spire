@@ -381,6 +381,140 @@ var ENEMY_DATABASE = {
       };
     }
   },
+  awakened_one: {
+    id: 'awakened_one',
+    name: 'The Awakened One',
+    sprite: '👁️',
+    maxHp: [300, 300],
+    getNextIntent: function(enemy, turnNumber) {
+      // Initialize phase tracking
+      if (!enemy._phase) enemy._phase = 1;
+      if (!enemy._phasePattern) enemy._phasePattern = 0;
+
+      // Phase transition at 50% HP
+      if (enemy._phase === 1 && enemy.currentHp <= enemy.maxHp / 2) {
+        enemy._phase = 2;
+        enemy._phasePattern = 0;
+        // Gain 10 Strength, heal 50 HP on transition
+        if (!enemy.statusEffects.strength) enemy.statusEffects.strength = 0;
+        enemy.statusEffects.strength += 10;
+        enemy.currentHp = Math.min(enemy.maxHp, enemy.currentHp + 50);
+        log('The Awakened One awakens! Strength +10, healed 50 HP!');
+        return {
+          type: 'buff',
+          label: 'Awakened!',
+          effects: [{ type: 'applyBuff', status: 'strength', value: 0 }]
+        };
+      }
+
+      if (enemy._phase === 1) {
+        // Phase 1: Slash → Soul Strike → Rebirth
+        var p1 = enemy._phasePattern % 3;
+        enemy._phasePattern++;
+        if (p1 === 0) {
+          return {
+            type: 'attack',
+            label: 'Slash 20',
+            effects: [{ type: 'damage', value: 20 }]
+          };
+        } else if (p1 === 1) {
+          return {
+            type: 'attack',
+            label: 'Soul Strike 6x4',
+            effects: [
+              { type: 'damage', value: 6 },
+              { type: 'damage', value: 6 },
+              { type: 'damage', value: 6 },
+              { type: 'damage', value: 6 }
+            ]
+          };
+        } else {
+          return {
+            type: 'buff',
+            label: 'Rebirth',
+            effects: [
+              { type: 'heal', value: 10 },
+              { type: 'applyBuff', status: 'strength', value: 2 }
+            ]
+          };
+        }
+      } else {
+        // Phase 2: Dark Echo → Void → Wrath
+        var p2 = enemy._phasePattern % 3;
+        enemy._phasePattern++;
+        if (p2 === 0) {
+          return {
+            type: 'attack',
+            label: 'Dark Echo 25',
+            effects: [
+              { type: 'damage', value: 25 },
+              { type: 'applyStatus', status: 'weak', value: 2 }
+            ]
+          };
+        } else if (p2 === 1) {
+          return {
+            type: 'attack',
+            label: 'Void 15',
+            effects: [
+              { type: 'damage', value: 15 },
+              { type: 'applyStatus', status: 'vulnerable', value: 2 }
+            ]
+          };
+        } else {
+          return {
+            type: 'attack',
+            label: 'Wrath 40',
+            effects: [{ type: 'damage', value: 40 }]
+          };
+        }
+      }
+    }
+  },
+  nemesis: {
+    id: 'nemesis',
+    name: 'Nemesis',
+    sprite: '👤',
+    maxHp: [180, 185],
+    getNextIntent: function(enemy, turnNumber) {
+      // Every 4th turn (0-indexed: turn 3, 7, 11...): intangible
+      if (turnNumber > 0 && turnNumber % 4 === 3) {
+        enemy._intangible = true;
+        return {
+          type: 'buff',
+          label: 'Intangible',
+          effects: [{ type: 'block', value: 999 }]
+        };
+      }
+      // Cycle: Scythe → Debilitate → Attack
+      var cycle = turnNumber % 3;
+      if (turnNumber > 0 && (turnNumber - 1) % 4 === 3) {
+        // Adjust cycle after intangible turn
+        cycle = (turnNumber - Math.floor(turnNumber / 4)) % 3;
+      }
+      if (cycle === 0) {
+        return {
+          type: 'attack',
+          label: 'Scythe 45',
+          effects: [{ type: 'damage', value: 45 }]
+        };
+      } else if (cycle === 1) {
+        return {
+          type: 'debuff',
+          label: 'Debilitate',
+          effects: [
+            { type: 'applyStatus', status: 'weak', value: 3 },
+            { type: 'applyStatus', status: 'vulnerable', value: 3 }
+          ]
+        };
+      } else {
+        return {
+          type: 'attack',
+          label: 'Attack 25',
+          effects: [{ type: 'damage', value: 25 }]
+        };
+      }
+    }
+  },
   the_guardian: {
     id: 'the_guardian',
     name: 'The Guardian',

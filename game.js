@@ -30,9 +30,15 @@ var gameState = {
   map: null,
   act: 1,
   act1Boss: null,
+  score: 0,
+  scoreBreakdown: {},
+  seed: null,
+  rng: null,
+  _bossDamageTaken: 0,
   isEliteFight: false,
   isBossFight: false,
   _act2EliteHpBonus: false,
+  _act3EliteHpBonus: false,
   stats: {
     turnsPlayed: 0,
     cardsPlayed: 0,
@@ -62,6 +68,41 @@ function log(msg) {
   }
 }
 
+function addScore(amount, reason) {
+  gameState.score = (gameState.score || 0) + amount;
+  if (reason) {
+    gameState.scoreBreakdown[reason] = (gameState.scoreBreakdown[reason] || 0) + amount;
+    log('+' + amount + ' score (' + reason + ')');
+  }
+}
+
+function calculateFinalScore(victory) {
+  if (victory) {
+    // HP remaining bonus
+    var hpBonus = gameState.player.currentHp;
+    if (hpBonus > 0) addScore(hpBonus, 'HP remaining');
+
+    // Gold remaining bonus
+    var goldBonus = Math.floor((gameState.player.gold || 0) / 10);
+    if (goldBonus > 0) addScore(goldBonus, 'Gold remaining');
+
+    // Deck bloat penalty
+    var deckSize = gameState.player.deck.length;
+    if (deckSize > 20) {
+      var penalty = (deckSize - 20) * 2;
+      addScore(-penalty, 'Deck bloat penalty');
+    }
+
+    // Speed bonus
+    var speedBonus = Math.max(0, 200 - (gameState.stats.turnsPlayed || 0));
+    if (speedBonus > 0) addScore(speedBonus, 'Speed bonus');
+  }
+
+  // Relics bonus (applies to both victory and defeat)
+  var relicCount = gameState.player.relics.length;
+  if (relicCount > 0) addScore(relicCount * 10, 'Relics collected');
+}
+
 // === COMBAT INIT ===
 function initCombat(enemyIds) {
   // Accept string or array
@@ -77,9 +118,19 @@ function initCombat(enemyIds) {
     }
     gameState._act2EliteHpBonus = false;
   }
+  // Act 3 elites get +40% HP bonus
+  if (gameState._act3EliteHpBonus) {
+    for (var eb3 = 0; eb3 < gameState.enemies.length; eb3++) {
+      var bonus3 = Math.floor(gameState.enemies[eb3].maxHp * 0.4);
+      gameState.enemies[eb3].maxHp += bonus3;
+      gameState.enemies[eb3].currentHp += bonus3;
+    }
+    gameState._act3EliteHpBonus = false;
+  }
   gameState.turn = 0;
   gameState.selectedCard = null;
   gameState.combatLog = [];
+  gameState._bossDamageTaken = 0;
 
   // Put full deck into draw pile and shuffle
   gameState.player.drawPile = gameState.player.deck.map(function(card) {
@@ -109,7 +160,7 @@ function initCombat(enemyIds) {
   startPlayerTurn();
 }
 
-function startGame() {
+function startGame(seedValue) {
   gameState.player.currentHp = gameState.player.maxHp;
   gameState.player.deck = createStarterDeck();
   gameState.player.gold = 0;
@@ -120,15 +171,23 @@ function startGame() {
   gameState.act = 1;
   gameState.act1Boss = null;
   gameState._act2EliteHpBonus = false;
+  gameState._act3EliteHpBonus = false;
+  gameState.score = 0;
+  gameState.scoreBreakdown = {};
+  gameState._bossDamageTaken = 0;
+  initSeed(seedValue);
   gameState.map = generateMap(1);
   gameState.encounterIndex = 0;
   gameState.isEliteFight = false;
   gameState.isBossFight = false;
   gameState.stats = { turnsPlayed: 0, cardsPlayed: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, floorsCleared: 0, enemiesKilled: 0 };
   gameState.phase = 'map';
-  // Remove act-2 class if present
+  // Remove act-2/act-3 class if present
   var container = document.getElementById('game-container');
-  if (container) container.classList.remove('act-2');
+  if (container) {
+    container.classList.remove('act-2');
+    container.classList.remove('act-3');
+  }
   hideOverlays();
   renderCombat();
   showMapScreen();
@@ -465,6 +524,7 @@ function playCard(instanceId, targetIndex) {
   gameState.selectedCard = null;
   log('Played ' + card.name + '.');
   gameState.stats.cardsPlayed++;
+  addScore(1, 'Cards played');
   if (typeof AudioManager !== 'undefined' && AudioManager.enabled) AudioManager.playCardSound();
 
   // Check for victory
@@ -814,6 +874,7 @@ function applyDamage(damage, target) {
   if (hpLoss > 0) {
     if (target === gameState.player) {
       gameState.stats.damageTaken += hpLoss;
+      gameState._bossDamageTaken += hpLoss;
     } else {
       gameState.stats.damageDealt += hpLoss;
     }
@@ -842,8 +903,13 @@ function applyDamage(damage, target) {
     target.currentHp = 0;
     target.dead = true;
     gameState.stats.enemiesKilled++;
-    if (target !== gameState.player && typeof AudioManager !== 'undefined' && AudioManager.enabled) {
-      AudioManager.playEnemyDeathSound();
+    if (target !== gameState.player) {
+      addScore(10, 'Enemies killed');
+      if (gameState.isEliteFight) addScore(30, 'Elite bonus');
+      if (gameState.isBossFight) addScore(50, 'Boss bonus');
+      if (typeof AudioManager !== 'undefined' && AudioManager.enabled) {
+        AudioManager.playEnemyDeathSound();
+      }
     }
     if (target.onDeath) target.onDeath();
   }
@@ -991,6 +1057,7 @@ function onCombatVictory() {
   gameState.player.gold += goldReward;
   gameState.stats.goldEarned += goldReward;
   gameState.stats.floorsCleared++;
+  addScore(5, 'Floors cleared');
   log('Gained ' + goldReward + ' gold.');
 
   // 40% chance to get a potion
@@ -1003,6 +1070,11 @@ function onCombatVictory() {
         break;
       }
     }
+  }
+
+  // Perfect boss kill bonus
+  if (gameState.isBossFight && gameState._bossDamageTaken === 0) {
+    addScore(100, 'Perfect boss kill');
   }
 
   renderCombat();
@@ -1018,6 +1090,7 @@ function onPlayerDeath() {
   gameState.phase = 'gameOver';
   if (typeof AudioManager !== 'undefined' && AudioManager.enabled) AudioManager.playDeathSound();
   gameState.player.currentHp = 0;
+  calculateFinalScore(false);
   clearSave();
   renderCombat();
   showGameOverScreen(false);
@@ -1044,8 +1117,8 @@ function restartGame() {
   clearSave();
   var container = document.getElementById('game-container');
   if (container) container.classList.remove('act-2');
-  startGame();
   hideOverlays();
+  showStartScreen();
 }
 
 // Visual feedback stubs (implemented in ui.js)
@@ -1122,13 +1195,23 @@ function loadGame() {
       }
     }
 
-    // Restore Act 2 visual theme if needed
+    // Restore seeded RNG
+    if (gameState.seed !== null && gameState.seed !== undefined) {
+      gameState.rng = mulberry32(gameState.seed);
+      // Advance RNG to approximate state (maps already generated)
+      var advanceCount = (gameState.act || 1) * MAP_CONFIG.floors * MAP_CONFIG.nodesPerFloor;
+      for (var r = 0; r < advanceCount; r++) gameState.rng();
+    }
+
+    // Restore act visual theme if needed
     var container = document.getElementById('game-container');
     if (container) {
+      container.classList.remove('act-2');
+      container.classList.remove('act-3');
       if (gameState.act === 2) {
         container.classList.add('act-2');
-      } else {
-        container.classList.remove('act-2');
+      } else if (gameState.act === 3) {
+        container.classList.add('act-3');
       }
     }
 

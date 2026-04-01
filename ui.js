@@ -1,5 +1,13 @@
 // === UI RENDERING ===
 
+function _getRarityDotHTML(card) {
+  var r = card.rarity || 'common';
+  if (r !== 'common' && r !== 'starter') {
+    return '<div class="card-rarity ' + r + '"></div>';
+  }
+  return '';
+}
+
 // Track enemies that have already had their death animation played
 var _dyingEnemyIds = {};
 
@@ -195,6 +203,14 @@ function createCardElement(card, index, totalCards) {
   desc.textContent = card.description;
   el.appendChild(desc);
 
+  // Rarity indicator
+  var rarity = card.rarity || 'common';
+  if (rarity !== 'common' && rarity !== 'starter') {
+    var rarityDot = document.createElement('div');
+    rarityDot.className = 'card-rarity ' + rarity;
+    el.appendChild(rarityDot);
+  }
+
   // Click handler
   if (canPlay) {
     (function(c) {
@@ -248,7 +264,8 @@ function showCardPreview(card) {
     '<div class="card-name">' + card.name + '</div>' +
     '<div class="card-type-label">' + card.type + '</div>' +
     '<div class="card-art">' + card.art + '</div>' +
-    '<div class="card-description">' + card.description + '</div>';
+    '<div class="card-description">' + card.description + '</div>' +
+    _getRarityDotHTML(card);
   preview.appendChild(el);
   preview.classList.remove('hidden');
 
@@ -305,6 +322,7 @@ function renderPlayerStats() {
   var blockText = document.getElementById('player-block-text');
   blockText.textContent = player.block;
   document.getElementById('player-block').style.opacity = player.block > 0 ? '1' : '0.3';
+  blockText.className = player.block > 0 ? 'block-badge' : '';
 
   // Status effects
   var statusArea = document.getElementById('player-status-effects');
@@ -602,10 +620,12 @@ function createRewardCardElement(card) {
   el.appendChild(desc);
 
   // Rarity indicator
-  var rarity = document.createElement('div');
-  rarity.style.cssText = 'font-size:9px;text-align:center;color:#888;margin-top:4px;text-transform:uppercase;';
-  rarity.textContent = card.rarity;
-  el.appendChild(rarity);
+  var cardRarity = card.rarity || 'common';
+  if (cardRarity !== 'common' && cardRarity !== 'starter') {
+    var rarityDot = document.createElement('div');
+    rarityDot.className = 'card-rarity ' + cardRarity;
+    el.appendChild(rarityDot);
+  }
 
   (function(c) {
     el.addEventListener('click', function() {
@@ -647,14 +667,22 @@ function _showGameOverScreen(victory) {
   var title = document.getElementById('game-over-title');
   var subtitle = document.getElementById('game-over-subtitle');
 
+  // Clear any previously inserted elements (score, stats, seed)
+  var oldElements = screen.querySelectorAll('.score-display, .game-stats, .seed-display');
+  for (var oi = 0; oi < oldElements.length; oi++) {
+    oldElements[oi].parentNode.removeChild(oldElements[oi]);
+  }
+
   if (victory) {
-    title.textContent = 'Victory!';
-    title.className = 'overlay-title victory';
     var act = gameState.act || 1;
-    if (act >= 2) {
-      subtitle.textContent = 'You conquered the Spire! All acts cleared! Deck: ' + gameState.player.deck.length + ' cards. Gold: ' + (gameState.player.gold || 0) + '.';
+    if (act >= 3) {
+      title.textContent = 'True Victory!';
+      title.className = 'overlay-title victory';
+      subtitle.textContent = 'You have conquered the Spire! The Awakened One has fallen.';
     } else {
-      subtitle.textContent = 'You conquered the Spire! Deck size: ' + gameState.player.deck.length + ' cards. Gold: ' + (gameState.player.gold || 0) + '.';
+      title.textContent = 'Victory!';
+      title.className = 'overlay-title victory';
+      subtitle.textContent = 'You conquered the Spire!';
     }
   } else {
     title.textContent = 'Defeat';
@@ -662,6 +690,36 @@ function _showGameOverScreen(victory) {
     var act2 = gameState.act || 1;
     var floorText = gameState.map ? 'Act ' + act2 + ' floor ' + gameState.map.currentFloor : 'encounter ' + (gameState.encounterIndex + 1);
     subtitle.textContent = 'You have been slain on ' + floorText + '.';
+  }
+
+  // Score display
+  var finalScore = gameState.score || 0;
+  var highScore = parseInt(localStorage.getItem('stsHighScore') || '0', 10);
+  var isNewHighScore = finalScore > highScore;
+  if (isNewHighScore && finalScore > 0) {
+    localStorage.setItem('stsHighScore', finalScore);
+  }
+
+  var scoreDiv = document.createElement('div');
+  scoreDiv.className = 'score-display';
+  scoreDiv.innerHTML = '<div class="score-total">' + finalScore + '</div>' +
+    '<div class="score-label">FINAL SCORE</div>' +
+    (isNewHighScore && finalScore > 0 ? '<div class="new-high-score">NEW HIGH SCORE!</div>' : '') +
+    '<div class="high-score-compare">High Score: ' + Math.max(finalScore, highScore) + '</div>';
+
+  // Score breakdown
+  var breakdown = gameState.scoreBreakdown || {};
+  var breakdownKeys = Object.keys(breakdown);
+  if (breakdownKeys.length > 0) {
+    var breakdownDiv = document.createElement('div');
+    breakdownDiv.className = 'score-breakdown';
+    for (var bi = 0; bi < breakdownKeys.length; bi++) {
+      var reason = breakdownKeys[bi];
+      var amount = breakdown[reason];
+      var sign = amount >= 0 ? '+' : '';
+      breakdownDiv.innerHTML += '<div class="score-row"><span>' + reason + '</span><span>' + sign + amount + '</span></div>';
+    }
+    scoreDiv.appendChild(breakdownDiv);
   }
 
   // Stats
@@ -678,9 +736,39 @@ function _showGameOverScreen(victory) {
     '<div class="stat-row"><span>Gold Earned</span><span>' + (s.goldEarned || 0) + '</span></div>' +
     '<div class="stat-row"><span>Final Deck</span><span>' + gameState.player.deck.length + ' cards</span></div>';
 
-  // Insert before the button
+  // Seed display
+  var seedDiv = document.createElement('div');
+  seedDiv.className = 'seed-display';
+  var seedVal = gameState.seed !== null && gameState.seed !== undefined ? gameState.seed : '???';
+  seedDiv.innerHTML = '<span class="seed-label">Seed: </span><span class="seed-value">' + seedVal + '</span>' +
+    '<button class="seed-copy-btn" title="Copy seed">Copy</button>';
+
+  // Insert elements before the button
   var btn = screen.querySelector('.btn');
+  screen.insertBefore(scoreDiv, btn);
   screen.insertBefore(statsDiv, btn);
+  screen.insertBefore(seedDiv, btn);
+
+  // Copy seed handler
+  var copyBtn = seedDiv.querySelector('.seed-copy-btn');
+  copyBtn.addEventListener('click', function() {
+    var seedText = String(seedVal);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(seedText).then(function() {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
+      });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = seedText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
+    }
+  });
 }
 
 function _hideOverlays() {
@@ -914,6 +1002,14 @@ function _showMapScreen() {
   info.appendChild(document.createElement('br'));
   info.appendChild(deckBtn);
 
+  // Seed display on map
+  if (gameState.seed !== null && gameState.seed !== undefined) {
+    var mapSeed = document.createElement('div');
+    mapSeed.className = 'map-seed-display';
+    mapSeed.textContent = 'Seed: ' + gameState.seed;
+    info.appendChild(mapSeed);
+  }
+
   // Show tutorial on first visit
   if (!localStorage.getItem('stsTutorialSeen')) {
     setTimeout(showTutorial, 500);
@@ -981,7 +1077,8 @@ function showUpgradeScreen() {
       '<div class="card-name">' + card.name + '</div>' +
       '<div class="card-type-label">' + card.type + '</div>' +
       '<div class="card-art">' + card.art + '</div>' +
-      '<div class="card-description">' + card.description + '</div>';
+      '<div class="card-description">' + card.description + '</div>' +
+      _getRarityDotHTML(card);
 
     (function(idx) {
       el.addEventListener('click', function() {
@@ -1187,7 +1284,8 @@ function showRemoveScreen() {
       '<div class="card-name">' + card.name + '</div>' +
       '<div class="card-type-label">' + card.type + '</div>' +
       '<div class="card-art">' + card.art + '</div>' +
-      '<div class="card-description">' + card.description + '</div>';
+      '<div class="card-description">' + card.description + '</div>' +
+      _getRarityDotHTML(card);
 
     (function(idx) {
       el.addEventListener('click', function() {
@@ -1350,7 +1448,8 @@ function showPileViewer(title, cards) {
       '<div class="card-name">' + card.name + '</div>' +
       '<div class="card-type-label">' + card.type + '</div>' +
       '<div class="card-art">' + card.art + '</div>' +
-      '<div class="card-description">' + card.description + '</div>';
+      '<div class="card-description">' + card.description + '</div>' +
+      _getRarityDotHTML(card);
     container.appendChild(el);
   }
 }
@@ -1485,6 +1584,18 @@ function _showStartScreen() {
     options.appendChild(continueBtn);
   }
 
+  // Seed input
+  var seedContainer = document.createElement('div');
+  seedContainer.className = 'seed-input-container';
+  var seedInput = document.createElement('input');
+  seedInput.type = 'text';
+  seedInput.id = 'seed-input';
+  seedInput.className = 'seed-input';
+  seedInput.placeholder = 'Enter seed (optional)';
+  seedInput.maxLength = 20;
+  seedContainer.appendChild(seedInput);
+  options.appendChild(seedContainer);
+
   var newBtn = document.createElement('button');
   newBtn.className = 'btn btn-secondary';
   newBtn.style.cssText = 'margin:8px;display:block;width:250px;';
@@ -1492,9 +1603,19 @@ function _showStartScreen() {
   newBtn.addEventListener('click', function() {
     clearSave();
     _hideOverlays();
-    startGame();
+    var seedVal = seedInput.value.trim();
+    startGame(seedVal || undefined);
   });
   options.appendChild(newBtn);
+
+  // High score display
+  var highScore = parseInt(localStorage.getItem('stsHighScore') || '0', 10);
+  if (highScore > 0) {
+    var hsDiv = document.createElement('div');
+    hsDiv.className = 'start-high-score';
+    hsDiv.textContent = 'High Score: ' + highScore;
+    options.appendChild(hsDiv);
+  }
 }
 
 // === START GAME ===

@@ -4,6 +4,37 @@ var MAP_CONFIG = {
   pathCount: 4
 };
 
+// === SEEDED PRNG (mulberry32) ===
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function hashString(str) {
+  var hash = 0;
+  for (var i = 0; i < str.length; i++) {
+    var ch = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + ch;
+    hash |= 0;
+  }
+  return hash;
+}
+
+function initSeed(seedValue) {
+  if (seedValue === undefined || seedValue === null || seedValue === '') {
+    seedValue = Math.floor(Math.random() * 2147483647);
+  }
+  if (typeof seedValue === 'string') {
+    seedValue = hashString(seedValue);
+  }
+  gameState.seed = seedValue;
+  gameState.rng = mulberry32(seedValue);
+}
+
 var NODE_TYPES = {
   fight: { icon: '\u2694\uFE0F', label: 'Fight' },
   elite: { icon: '\uD83D\uDD25', label: 'Elite' },
@@ -73,6 +104,22 @@ var FIGHT_POOLS_ACT2_HARD = [
   ['looter', 'looter', 'red_louse']
 ];
 
+// === ACT 3 FIGHT POOLS ===
+var FIGHT_POOLS_ACT3_EASY = [
+  ['cultist', 'cultist', 'cultist'],
+  ['jaw_worm', 'jaw_worm', 'fungi_beast']
+];
+
+var FIGHT_POOLS_ACT3_MEDIUM = [
+  ['snecko', 'snecko'],
+  ['nob']
+];
+
+var FIGHT_POOLS_ACT3_HARD = [
+  ['lagavulin', 'red_louse', 'red_louse'],
+  ['book_of_stabbing']
+];
+
 function generateMap(act) {
   act = act || 1;
   var floors = [];
@@ -100,7 +147,7 @@ function generateMap(act) {
     var currentNode = p % MAP_CONFIG.nodesPerFloor;
     for (var f2 = 0; f2 < MAP_CONFIG.floors - 1; f2++) {
       // Connect to next floor
-      var nextNode = currentNode + Math.floor(Math.random() * 3) - 1;
+      var nextNode = currentNode + Math.floor(gameState.rng() * 3) - 1;
       nextNode = Math.max(0, Math.min(MAP_CONFIG.nodesPerFloor - 1, nextNode));
 
       // Add connection if not already there
@@ -186,7 +233,7 @@ function getNodeType(floor) {
   if (floor === MAP_CONFIG.floors - 2) return 'rest'; // Before boss always rest
   if (floor === MAP_CONFIG.floors - 1) return 'boss';
 
-  var roll = Math.random();
+  var roll = gameState.rng();
   if (floor >= 5 && roll < 0.08) return 'elite';
   if (roll < 0.08 + 0.03) return 'treasure';
   if (roll < 0.08 + 0.03 + 0.05) return 'shop';
@@ -234,7 +281,15 @@ function selectMapNode(floorIdx, nodeIdx) {
     case 'fight':
       var fightPool;
       var realFloor = floorIdx - 1; // Subtract 1 for start node
-      if (act === 2) {
+      if (act === 3) {
+        if (realFloor < 5) {
+          fightPool = FIGHT_POOLS_ACT3_EASY;
+        } else if (realFloor < 10) {
+          fightPool = FIGHT_POOLS_ACT3_MEDIUM;
+        } else {
+          fightPool = FIGHT_POOLS_ACT3_HARD;
+        }
+      } else if (act === 2) {
         if (realFloor < 5) {
           fightPool = FIGHT_POOLS_ACT2_EASY;
         } else if (realFloor < 10) {
@@ -257,14 +312,28 @@ function selectMapNode(floorIdx, nodeIdx) {
     case 'elite':
       var eliteRoll = Math.random();
       var eliteEnemies;
-      if (eliteRoll < 0.25) {
-        eliteEnemies = ['nob'];
-      } else if (eliteRoll < 0.5) {
-        eliteEnemies = ['lagavulin'];
-      } else if (eliteRoll < 0.75) {
-        eliteEnemies = ['book_of_stabbing'];
+      if (act === 3) {
+        // Act 3 elites: Nemesis or existing elites with +40% HP
+        if (eliteRoll < 0.4) {
+          eliteEnemies = ['nemesis'];
+        } else if (eliteRoll < 0.6) {
+          eliteEnemies = ['nob'];
+        } else if (eliteRoll < 0.8) {
+          eliteEnemies = ['lagavulin'];
+        } else {
+          eliteEnemies = ['book_of_stabbing'];
+        }
+        gameState._act3EliteHpBonus = true;
       } else {
-        eliteEnemies = ['sentry', 'sentry', 'sentry'];
+        if (eliteRoll < 0.25) {
+          eliteEnemies = ['nob'];
+        } else if (eliteRoll < 0.5) {
+          eliteEnemies = ['lagavulin'];
+        } else if (eliteRoll < 0.75) {
+          eliteEnemies = ['book_of_stabbing'];
+        } else {
+          eliteEnemies = ['sentry', 'sentry', 'sentry'];
+        }
       }
       // Act 2 elites get +20% HP bonus
       if (act === 2) {
@@ -274,19 +343,25 @@ function selectMapNode(floorIdx, nodeIdx) {
       gameState.isEliteFight = true;
       break;
     case 'boss':
-      var bossCandidates = ['slime_boss', 'the_guardian', 'hexaghost'];
-      var bosses = bossCandidates.filter(function(id) { return !!ENEMY_DATABASE[id]; });
-      if (bosses.length === 0) bosses = ['jaw_worm'];
+      var bossId;
+      if (act === 3) {
+        // Act 3 boss is always The Awakened One
+        bossId = 'awakened_one';
+      } else {
+        var bossCandidates = ['slime_boss', 'the_guardian', 'hexaghost'];
+        var bosses = bossCandidates.filter(function(id) { return !!ENEMY_DATABASE[id]; });
+        if (bosses.length === 0) bosses = ['jaw_worm'];
 
-      if (act === 2 && gameState.act1Boss) {
-        // Ensure different boss from Act 1
-        bosses = bosses.filter(function(id) { return id !== gameState.act1Boss; });
-        if (bosses.length === 0) {
-          bosses = bossCandidates.filter(function(id) { return !!ENEMY_DATABASE[id]; });
+        if (act === 2 && gameState.act1Boss) {
+          // Ensure different boss from Act 1
+          bosses = bosses.filter(function(id) { return id !== gameState.act1Boss; });
+          if (bosses.length === 0) {
+            bosses = bossCandidates.filter(function(id) { return !!ENEMY_DATABASE[id]; });
+          }
         }
-      }
 
-      var bossId = bosses[Math.floor(Math.random() * bosses.length)];
+        bossId = bosses[Math.floor(Math.random() * bosses.length)];
+      }
 
       // Track the boss for act transition
       if (act === 1) {
@@ -331,17 +406,24 @@ function returnToMap() {
   gameState.isEliteFight = false;
   gameState.isBossFight = false;
   gameState._act2EliteHpBonus = false;
+  gameState._act3EliteHpBonus = false;
 
   // Check if all floors cleared (boss beaten)
   if (gameState.map.currentFloor >= MAP_CONFIG.floors) {
     var act = gameState.act || 1;
     if (act === 1) {
       // Transition to Act 2
-      showActTransition();
+      showActTransition(2);
+      return;
+    } else if (act === 2) {
+      // Transition to Act 3
+      showActTransition(3);
       return;
     } else {
-      // True victory after Act 2 boss
+      // True victory after Act 3 boss
       gameState.phase = 'victory';
+      calculateFinalScore(true);
+      clearSave();
       showGameOverScreen(true);
       return;
     }
@@ -351,20 +433,34 @@ function returnToMap() {
   showMapScreen();
 }
 
-function showActTransition() {
+function showActTransition(nextAct) {
+  nextAct = nextAct || 2;
   gameState.phase = 'actTransition';
   hideOverlays();
 
   var screen = document.getElementById('act-transition');
   if (screen) {
+    // Update transition text dynamically
+    var textEl = screen.querySelector('.act-transition-text');
+    if (textEl) {
+      textEl.textContent = 'ACT ' + nextAct;
+    }
     screen.classList.remove('hidden');
 
     setTimeout(function() {
       screen.classList.add('hidden');
-      transitionToAct2();
+      if (nextAct === 3) {
+        transitionToAct3();
+      } else {
+        transitionToAct2();
+      }
     }, 2500);
   } else {
-    transitionToAct2();
+    if (nextAct === 3) {
+      transitionToAct3();
+    } else {
+      transitionToAct2();
+    }
   }
 }
 
@@ -376,7 +472,29 @@ function transitionToAct2() {
 
   // Apply Act 2 visual theme
   var container = document.getElementById('game-container');
-  if (container) container.classList.add('act-2');
+  if (container) {
+    container.classList.remove('act-3');
+    container.classList.add('act-2');
+  }
+
+  gameState.phase = 'map';
+  saveGame();
+  renderCombat();
+  showMapScreen();
+}
+
+function transitionToAct3() {
+  gameState.act = 3;
+  gameState.map = generateMap(3);
+  gameState.isEliteFight = false;
+  gameState.isBossFight = false;
+
+  // Apply Act 3 visual theme
+  var container = document.getElementById('game-container');
+  if (container) {
+    container.classList.remove('act-2');
+    container.classList.add('act-3');
+  }
 
   gameState.phase = 'map';
   saveGame();
