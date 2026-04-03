@@ -55,17 +55,32 @@ function renderEnemies() {
       var intent = document.createElement('div');
       intent.className = 'enemy-intent intent-' + enemy.currentIntent.type;
       var intentIcon = getIntentIcon(enemy.currentIntent.type);
-      intent.textContent = intentIcon + ' ' + enemy.currentIntent.label;
-      // Intent tooltip
-      var intentTip = getIntentTooltip(enemy.currentIntent);
-      intent.title = intentTip;
+      // Calculate intent value from effects
+      var intentValue = _getIntentValue(enemy.currentIntent, enemy);
+      intent.textContent = intentIcon + ' ' + enemy.currentIntent.label + (intentValue ? ' ' + intentValue : '');
+      // Intent tooltip (custom styled)
+      (function(tip, el) {
+        el.addEventListener('mouseenter', function() { _showTooltipAt(tip, el); });
+        el.addEventListener('mouseleave', _hideTooltip);
+      })(getIntentTooltip(enemy.currentIntent, enemy), intent);
       slot.appendChild(intent);
     }
 
     // Sprite
     var sprite = document.createElement('div');
     sprite.className = 'enemy-sprite';
-    sprite.textContent = enemy.sprite;
+    // Stagger idle animation per enemy
+    sprite.style.animationDelay = (i * 0.4) + 's';
+    // Spawn animation on combat start
+    if (gameState.turn <= 1 && !enemy.dead) {
+      sprite.classList.add('spawning');
+      sprite.style.animationDelay = (i * 0.15) + 's';
+    }
+    if (enemy.sprite && enemy.sprite.indexOf('assets/') === 0) {
+      sprite.innerHTML = '<img src="' + enemy.sprite + '" alt="" class="enemy-sprite-img">';
+    } else {
+      sprite.textContent = enemy.sprite;
+    }
     slot.appendChild(sprite);
 
     // Name
@@ -138,6 +153,135 @@ function renderHand() {
     var el = createCardElement(card, i, count);
     area.appendChild(el);
   }
+  window._animateHand = false;
+}
+
+// === DRAG AND DROP ===
+var _dragState = { dragging: false, card: null, el: null, clone: null, startX: 0, startY: 0, lastHover: null };
+
+function _findDropTarget(x, y) {
+  var el = document.elementFromPoint(x, y);
+  while (el) {
+    if (el.classList && el.classList.contains('enemy-slot') && !el.classList.contains('defeated')) {
+      return { type: 'enemy', index: parseInt(el.getAttribute('data-enemy-index')), el: el };
+    }
+    if (el.id === 'player-area' || el.id === 'player-avatar') {
+      return { type: 'player', el: el };
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function _clearDragHighlights() {
+  var hovered = document.querySelectorAll('.drag-over');
+  for (var i = 0; i < hovered.length; i++) hovered[i].classList.remove('drag-over');
+}
+
+function _startDrag(e, card, el) {
+  if (gameState.phase !== 'playerTurn') return;
+  _dragState.startX = e.clientX;
+  _dragState.startY = e.clientY;
+  _dragState.card = card;
+  _dragState.el = el;
+  _dragState.dragging = false;
+}
+
+function _moveDrag(e) {
+  if (!_dragState.card) return;
+  var dx = e.clientX - _dragState.startX;
+  var dy = e.clientY - _dragState.startY;
+
+  if (!_dragState.dragging) {
+    if (Math.abs(dx) + Math.abs(dy) < 10) return;
+    // Enter drag mode
+    _dragState.dragging = true;
+    _dragState.el.classList.add('dragging');
+    hideCardTooltip();
+    gameState.selectedCard = null;
+
+    // Create clone
+    var clone = _dragState.el.cloneNode(true);
+    clone.className = 'card drag-clone type-' + _dragState.card.type;
+    if (_dragState.card.upgraded) clone.classList.add('upgraded');
+    var rect = _dragState.el.getBoundingClientRect();
+    clone.style.width = rect.width + 'px';
+    clone.style.height = rect.height + 'px';
+    clone.style.left = rect.left + 'px';
+    clone.style.top = rect.top + 'px';
+    document.getElementById('game-container').appendChild(clone);
+    _dragState.clone = clone;
+    _dragState.offsetX = e.clientX - rect.left;
+    _dragState.offsetY = e.clientY - rect.top;
+  }
+
+  // Move clone
+  if (_dragState.clone) {
+    _dragState.clone.style.left = (e.clientX - _dragState.offsetX) + 'px';
+    _dragState.clone.style.top = (e.clientY - _dragState.offsetY) + 'px';
+  }
+
+  // Highlight drop targets
+  _clearDragHighlights();
+  var target = _findDropTarget(e.clientX, e.clientY);
+  if (target) target.el.classList.add('drag-over');
+  _dragState.lastHover = target;
+}
+
+function _endDrag(e) {
+  if (!_dragState.card) return;
+  var wasDragging = _dragState.dragging;
+  var card = _dragState.card;
+
+  // Cleanup
+  if (_dragState.clone) {
+    _dragState.clone.parentNode.removeChild(_dragState.clone);
+  }
+  if (_dragState.el) {
+    _dragState.el.classList.remove('dragging');
+  }
+  _clearDragHighlights();
+
+  var target = _dragState.lastHover;
+  // Reset state
+  _dragState.card = null;
+  _dragState.el = null;
+  _dragState.clone = null;
+  _dragState.dragging = false;
+  _dragState.lastHover = null;
+
+  if (!wasDragging) return; // Let click handler fire
+
+  // Play card on drop target
+  if (target) {
+    if (target.type === 'enemy') {
+      playCard(card.instanceId, target.index);
+    } else if (target.type === 'player' && !card.needsTarget) {
+      playCard(card.instanceId, null);
+    }
+  }
+  // If no target, card just returns to hand (re-render happens automatically)
+}
+
+// Global mouse/touch listeners for drag (only added once)
+if (!window._dragListenersAdded) {
+  document.addEventListener('mousemove', function(e) { _moveDrag(e); });
+  document.addEventListener('mouseup', function(e) { _endDrag(e); });
+  document.addEventListener('touchmove', function(e) {
+    if (_dragState.card) {
+      e.preventDefault();
+      _moveDrag(e.touches[0]);
+    }
+  }, { passive: false });
+  document.addEventListener('touchend', function(e) {
+    if (_dragState.card) {
+      var touch = e.changedTouches[0];
+      // Update last hover before ending
+      _dragState.lastHover = _findDropTarget(touch.clientX, touch.clientY);
+      _endDrag(touch);
+    }
+  });
+  window._dragListenersAdded = true;
 }
 
 function createCardElement(card, index, totalCards) {
@@ -151,9 +295,11 @@ function createCardElement(card, index, totalCards) {
     (card.playable === false ? ' unplayable' : '') +
     (card.upgraded ? ' upgraded' : '');
 
-  // Deal animation with stagger
-  el.style.animationDelay = (index * 0.06) + 's';
-  el.classList.add('dealing');
+  // Deal animation with stagger (only on fresh draw, not re-renders)
+  if (window._animateHand) {
+    el.style.animationDelay = (index * 0.06) + 's';
+    el.classList.add('dealing');
+  }
 
   // Dynamic overlap for large hands
   if (totalCards > 6) {
@@ -194,13 +340,13 @@ function createCardElement(card, index, totalCards) {
   // Art
   var art = document.createElement('div');
   art.className = 'card-art';
-  art.textContent = card.art;
+  art.innerHTML = _cardArtHTML(card.art);
   el.appendChild(art);
 
   // Description
   var desc = document.createElement('div');
   desc.className = 'card-description';
-  desc.textContent = card.description;
+  desc.textContent = Td(card.description);
   el.appendChild(desc);
 
   // Rarity indicator
@@ -216,9 +362,23 @@ function createCardElement(card, index, totalCards) {
     (function(c) {
       el.addEventListener('click', function(e) {
         e.stopPropagation();
+        if (_dragState.dragging) return; // Don't fire click after drag
         onCardClick(c);
       });
     })(card);
+  }
+
+  // Drag handler
+  if (canPlay) {
+    (function(c, element) {
+      element.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        _startDrag(e, c, element);
+      });
+      element.addEventListener('touchstart', function(e) {
+        _startDrag(e.touches[0], c, element);
+      }, { passive: true });
+    })(card, el);
   }
 
   // Tooltip
@@ -263,8 +423,8 @@ function showCardPreview(card) {
   el.innerHTML = '<div class="card-cost">' + card.cost + '</div>' +
     '<div class="card-name">' + card.name + '</div>' +
     '<div class="card-type-label">' + card.type + '</div>' +
-    '<div class="card-art">' + card.art + '</div>' +
-    '<div class="card-description">' + card.description + '</div>' +
+    '<div class="card-art">' + _cardArtHTML(card.art) + '</div>' +
+    '<div class="card-description">' + Td(card.description) + '</div>' +
     _getRarityDotHTML(card);
   preview.appendChild(el);
   preview.classList.remove('hidden');
@@ -333,28 +493,32 @@ function renderPlayerStats() {
   // Gold display
   var goldEl = document.getElementById('gold-display');
   if (goldEl) {
-    goldEl.textContent = '\uD83D\uDCB0 ' + (player.gold || 0);
+    goldEl.textContent = '\uD83D\uDCB0 ' + (player.gold || 0) + ' ' + T('gold');
   }
 }
 
 function renderPileInfo() {
   var drawEl = document.getElementById('draw-pile-count');
-  drawEl.textContent = 'Draw: ' + gameState.player.drawPile.length;
+  drawEl.textContent = T('drawPile') + ': ' + gameState.player.drawPile.length;
   drawEl.style.cursor = 'pointer';
-  drawEl.onclick = function() { showPileViewer('Draw Pile', gameState.player.drawPile); };
+  drawEl.onclick = function() { showPileViewer(T('drawPile') + ' Pile', gameState.player.drawPile); };
 
   var discardEl = document.getElementById('discard-pile-count');
-  discardEl.textContent = 'Discard: ' + gameState.player.discardPile.length;
+  discardEl.textContent = T('discardPile') + ': ' + gameState.player.discardPile.length;
   discardEl.style.cursor = 'pointer';
-  discardEl.onclick = function() { showPileViewer('Discard Pile', gameState.player.discardPile); };
+  discardEl.onclick = function() { showPileViewer(T('discardPile') + ' Pile', gameState.player.discardPile); };
 
   var exhaustEl = document.getElementById('exhaust-pile-count');
   if (exhaustEl) {
-    exhaustEl.textContent = 'Exhaust: ' + gameState.player.exhaustPile.length;
+    exhaustEl.textContent = T('exhaustPile') + ': ' + gameState.player.exhaustPile.length;
     exhaustEl.style.display = gameState.player.exhaustPile.length > 0 ? '' : 'none';
     exhaustEl.style.cursor = 'pointer';
-    exhaustEl.onclick = function() { showPileViewer('Exhaust Pile', gameState.player.exhaustPile); };
+    exhaustEl.onclick = function() { showPileViewer(T('exhaustPile') + ' Pile', gameState.player.exhaustPile); };
   }
+
+  // Update end turn button text
+  var endTurnBtn = document.getElementById('end-turn-btn');
+  if (endTurnBtn) endTurnBtn.textContent = T('endTurn');
 }
 
 function renderPotions() {
@@ -462,7 +626,7 @@ function renderEncounterInfo() {
   var el = document.getElementById('encounter-info');
   if (gameState.map) {
     var act = gameState.act || 1;
-    el.textContent = 'ACT ' + act + ' - Floor ' + gameState.map.currentFloor + ' / ' + MAP_CONFIG.floors;
+    el.textContent = 'SECTOR ' + act + ' - DECK ' + gameState.map.currentFloor + ' / ' + MAP_CONFIG.floors;
   }
 }
 
@@ -481,11 +645,31 @@ function renderStatusBadges(statusEffects) {
     var badge = document.createElement('span');
     badge.className = 'status-badge ' + status;
     badge.textContent = getStatusIcon(status) + value;
-    badge.title = getStatusTooltip(status);
+    // Custom tooltip on hover
+    (function(s, v, el) {
+      el.addEventListener('mouseenter', function() {
+        var tip = getStatusTooltip(s);
+        if (s === 'regen') tip = tip.replace('N', v);
+        _showTooltipAt(tip, el);
+      });
+      el.addEventListener('mouseleave', _hideTooltip);
+    })(status, value, badge);
     container.appendChild(badge);
   }
 
   return container;
+}
+
+// === ENEMY ATTACK ANIMATION ===
+function _triggerEnemyAttack(enemyIndex) {
+  var slots = document.querySelectorAll('.enemy-slot');
+  if (!slots[enemyIndex]) return;
+  var sprite = slots[enemyIndex].querySelector('.enemy-sprite');
+  if (!sprite) return;
+  sprite.classList.remove('attacking');
+  void sprite.offsetWidth; // Force reflow
+  sprite.classList.add('attacking');
+  setTimeout(function() { sprite.classList.remove('attacking'); }, 400);
 }
 
 // === FLOATING NUMBERS ===
@@ -566,11 +750,40 @@ function createFloatingNumber(x, y, text, type) {
 
 // === SCREEN SHAKE ===
 function _triggerScreenShake() {
+  if (window._screenShakeEnabled === false) return;
   var container = document.getElementById('game-container');
   container.classList.add('shake');
   setTimeout(function() {
     container.classList.remove('shake');
   }, 300);
+}
+
+// === TOOLTIP HELPERS ===
+function _showTooltipAt(text, anchorEl) {
+  var tooltip = document.getElementById('tooltip');
+  if (!tooltip) return;
+  tooltip.textContent = text;
+  tooltip.style.display = 'block';
+  var rect = anchorEl.getBoundingClientRect();
+  var containerRect = document.getElementById('game-container').getBoundingClientRect();
+  tooltip.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+  tooltip.style.top = (rect.top - containerRect.top - 30) + 'px';
+}
+
+function _hideTooltip() {
+  var tooltip = document.getElementById('tooltip');
+  if (tooltip) tooltip.style.display = 'none';
+}
+
+// === SCREEN EFFECTS ===
+function _triggerScreenEffect(type) {
+  if (window._screenEffectsEnabled === false) return;
+  var el = document.getElementById('screen-effect');
+  if (!el) return;
+  el.className = '';
+  void el.offsetWidth;
+  el.className = 'screen-fx screen-fx-' + type;
+  setTimeout(function() { el.className = ''; }, 600);
 }
 
 // === OVERLAY SCREENS ===
@@ -611,12 +824,12 @@ function createRewardCardElement(card) {
 
   var art = document.createElement('div');
   art.className = 'card-art';
-  art.textContent = card.art;
+  art.innerHTML = _cardArtHTML(card.art);
   el.appendChild(art);
 
   var desc = document.createElement('div');
   desc.className = 'card-description';
-  desc.textContent = card.description;
+  desc.textContent = Td(card.description);
   el.appendChild(desc);
 
   // Rarity indicator
@@ -676,20 +889,20 @@ function _showGameOverScreen(victory) {
   if (victory) {
     var act = gameState.act || 1;
     if (act >= 3) {
-      title.textContent = 'True Victory!';
+      title.textContent = T('victory') + '!';
       title.className = 'overlay-title victory';
-      subtitle.textContent = 'You have conquered the Spire! The Awakened One has fallen.';
+      subtitle.textContent = 'You saved the station! The Overlord AI has been shut down.';
     } else {
-      title.textContent = 'Victory!';
+      title.textContent = T('actCleared');
       title.className = 'overlay-title victory';
-      subtitle.textContent = 'You conquered the Spire!';
+      subtitle.textContent = 'Advancing to next sector...';
     }
   } else {
-    title.textContent = 'Defeat';
+    title.textContent = T('defeat');
     title.className = 'overlay-title defeat';
     var act2 = gameState.act || 1;
-    var floorText = gameState.map ? 'Act ' + act2 + ' floor ' + gameState.map.currentFloor : 'encounter ' + (gameState.encounterIndex + 1);
-    subtitle.textContent = 'You have been slain on ' + floorText + '.';
+    var floorText = gameState.map ? 'Sector ' + act2 + ' deck ' + gameState.map.currentFloor : 'encounter ' + (gameState.encounterIndex + 1);
+    subtitle.textContent = 'Ship destroyed on ' + floorText + '.';
   }
 
   // Score display
@@ -727,13 +940,13 @@ function _showGameOverScreen(victory) {
   statsDiv.className = 'game-stats';
   var s = gameState.stats || {};
   statsDiv.innerHTML =
-    '<div class="stat-row"><span>Floors Cleared</span><span>' + (s.floorsCleared || 0) + '</span></div>' +
+    '<div class="stat-row"><span>Decks Cleared</span><span>' + (s.floorsCleared || 0) + '</span></div>' +
     '<div class="stat-row"><span>Enemies Killed</span><span>' + (s.enemiesKilled || 0) + '</span></div>' +
     '<div class="stat-row"><span>Cards Played</span><span>' + (s.cardsPlayed || 0) + '</span></div>' +
     '<div class="stat-row"><span>Turns Taken</span><span>' + (s.turnsPlayed || 0) + '</span></div>' +
     '<div class="stat-row"><span>Damage Dealt</span><span>' + (s.damageDealt || 0) + '</span></div>' +
     '<div class="stat-row"><span>Damage Taken</span><span>' + (s.damageTaken || 0) + '</span></div>' +
-    '<div class="stat-row"><span>Gold Earned</span><span>' + (s.goldEarned || 0) + '</span></div>' +
+    '<div class="stat-row"><span>Credits Earned</span><span>' + (s.goldEarned || 0) + '</span></div>' +
     '<div class="stat-row"><span>Final Deck</span><span>' + gameState.player.deck.length + ' cards</span></div>';
 
   // Seed display
@@ -772,7 +985,7 @@ function _showGameOverScreen(victory) {
 }
 
 function _hideOverlays() {
-  var screens = ['reward-screen', 'game-over-screen', 'map-screen', 'rest-screen', 'shop-screen', 'event-screen', 'relic-reward-screen', 'upgrade-screen', 'remove-screen', 'pile-viewer', 'start-screen', 'tutorial-screen', 'card-preview', 'act-transition'];
+  var screens = ['reward-screen', 'game-over-screen', 'map-screen', 'rest-screen', 'shop-screen', 'event-screen', 'relic-reward-screen', 'upgrade-screen', 'remove-screen', 'pile-viewer', 'start-screen', 'tutorial-screen', 'card-preview', 'act-transition', 'settings-screen'];
   for (var i = 0; i < screens.length; i++) {
     var el = document.getElementById(screens[i]);
     if (el) el.classList.add('hidden');
@@ -780,6 +993,38 @@ function _hideOverlays() {
 }
 
 // === HELPERS ===
+function _getIntentValue(intent, enemy) {
+  if (!intent.effects || !intent.effects.length) return '';
+  var str = (enemy.statusEffects && enemy.statusEffects.strength) || 0;
+  var isWeak = (enemy.statusEffects && enemy.statusEffects.weak > 0);
+  var totalDmg = 0;
+  var hitCount = 0;
+  var blockVal = 0;
+  for (var i = 0; i < intent.effects.length; i++) {
+    var eff = intent.effects[i];
+    if (eff.type === 'attack' || eff.type === 'damage') {
+      var dmg = (eff.damage || eff.value || 0) + str;
+      if (isWeak) dmg = Math.floor(dmg * 0.75);
+      dmg = Math.max(0, dmg);
+      totalDmg += dmg;
+      hitCount++;
+    } else if (eff.type === 'block') {
+      blockVal += (eff.value || 0);
+    }
+  }
+  if (hitCount > 1) return totalDmg + ' (' + Math.round(totalDmg / hitCount) + '×' + hitCount + ')';
+  if (hitCount === 1) return '' + totalDmg;
+  if (blockVal > 0) return '' + blockVal;
+  return '';
+}
+
+function _cardArtHTML(art) {
+  if (art && art.indexOf('assets/') === 0) {
+    return '<img src="' + art + '" alt="" class="card-art-img">';
+  }
+  return art || '';
+}
+
 function getIntentIcon(type) {
   switch (type) {
     case 'attack': return '⚔️';
@@ -790,13 +1035,13 @@ function getIntentIcon(type) {
   }
 }
 
-function getIntentTooltip(intent) {
+function getIntentTooltip(intent, enemy) {
+  var val = enemy ? _getIntentValue(intent, enemy) : '';
   switch (intent.type) {
     case 'attack':
-      var dmgMatch = intent.label.match(/(\d+)/);
-      return dmgMatch ? 'Attack for ' + dmgMatch[1] + ' damage' : 'Will attack';
+      return val ? 'Attack for ' + val + ' damage' : 'Will attack';
     case 'defend':
-      return 'Will gain Block';
+      return val ? 'Will gain ' + val + ' ' + T('block') : 'Will gain ' + T('block');
     case 'buff':
       return 'Will buff itself';
     case 'debuff':
@@ -808,26 +1053,26 @@ function getIntentTooltip(intent) {
 
 function getStatusIcon(status) {
   switch (status) {
-    case 'vulnerable': return '💔';
-    case 'weak': return '🔻';
-    case 'strength': return '💪';
-    case 'enrage': return '🔥';
-    case 'dexterity': return '🎯';
-    case 'frail': return '🥶';
-    case 'regen': return '🌱';
+    case 'vulnerable': return T('vulnerableIcon');
+    case 'weak': return T('weakIcon');
+    case 'strength': return T('strengthIcon');
+    case 'enrage': return T('enrageIcon');
+    case 'dexterity': return T('dexterityIcon');
+    case 'frail': return T('frailIcon');
+    case 'regen': return T('regenIcon');
     default: return '';
   }
 }
 
 function getStatusTooltip(status) {
   switch (status) {
-    case 'vulnerable': return 'Vulnerable: Takes 50% more attack damage';
-    case 'weak': return 'Weak: Deals 25% less attack damage';
-    case 'strength': return 'Strength: Deals additional attack damage';
-    case 'enrage': return 'Enrage: Gains Strength when player plays skills';
-    case 'dexterity': return 'Dexterity: Additional Block from cards';
-    case 'frail': return 'Frail: Block from cards reduced by 25%';
-    case 'regen': return 'Regen: Heal N HP at start of turn';
+    case 'vulnerable': return T('vulnerableTip');
+    case 'weak': return T('weakTip');
+    case 'strength': return T('strengthTip');
+    case 'enrage': return T('enrageTip');
+    case 'dexterity': return T('dexterityTip');
+    case 'frail': return T('frailTip');
+    case 'regen': return T('regenTip');
     default: return '';
   }
 }
@@ -851,7 +1096,8 @@ function _showMapScreen() {
   var mapTitle = screen.querySelector('.overlay-title');
   if (mapTitle) {
     var act = gameState.act || 1;
-    mapTitle.textContent = 'Act ' + act + ' Floor Map';
+    mapTitle.textContent = '[ SECTOR ' + act + ' — NAVIGATION ]';
+    mapTitle.style.cssText = 'color:#00ffcc;font-family:Courier New,monospace;letter-spacing:3px;font-size:20px;text-shadow:0 0 10px rgba(0,255,204,0.4);';
   }
 
   var container = document.getElementById('map-container');
@@ -867,7 +1113,7 @@ function _showMapScreen() {
     var floorLabel = document.createElement('div');
     floorLabel.className = 'map-floor-label';
     // Floor 0 is the start node — don't number it
-    floorLabel.textContent = (f === 0) ? '' : f;
+    floorLabel.textContent = (f === 0) ? '▶' : (f < 10 ? '0' + f : f);
     floorDiv.appendChild(floorLabel);
 
     var nodesDiv = document.createElement('div');
@@ -886,8 +1132,13 @@ function _showMapScreen() {
         (!isReachable && !node.visited ? ' unreachable' : '') +
         (f === map.currentFloor && n === map.currentNode ? ' current' : '');
 
-      nodeEl.textContent = NODE_TYPES[node.type] ? NODE_TYPES[node.type].icon : '?';
-      nodeEl.title = NODE_TYPES[node.type] ? NODE_TYPES[node.type].label : '';
+      var nodeInfo = NODE_TYPES[node.type];
+      if (nodeInfo && nodeInfo.img) {
+        nodeEl.innerHTML = '<img src="' + nodeInfo.img + '" class="map-node-img" alt="' + (nodeInfo.label || '') + '">';
+      } else {
+        nodeEl.textContent = nodeInfo ? nodeInfo.icon : '?';
+      }
+      nodeEl.title = nodeInfo ? nodeInfo.label : '';
 
       if (node.available) {
         (function(floor, nodeIdx) {
@@ -969,8 +1220,9 @@ function _showMapScreen() {
 
           // Style based on visited state
           var isVisited = map.floors[fl][ni].visited && map.floors[fl + 1][targetIdx].visited;
-          line.setAttribute('stroke', isVisited ? 'rgba(46,213,115,0.5)' : 'rgba(255,255,255,0.25)');
-          line.setAttribute('stroke-width', isVisited ? '3' : '2');
+          line.setAttribute('stroke', isVisited ? 'rgba(0,255,204,0.4)' : 'rgba(0,255,204,0.12)');
+          line.setAttribute('stroke-width', isVisited ? '2' : '1');
+          if (!isVisited) line.setAttribute('stroke-dasharray', '4,4');
 
           svg.appendChild(line);
         }
@@ -988,14 +1240,14 @@ function _showMapScreen() {
 
   // Player info
   var info = document.getElementById('map-player-info');
-  info.innerHTML = '\u2764\uFE0F ' + gameState.player.currentHp + '/' + gameState.player.maxHp +
-    ' | \uD83D\uDCB0 ' + (gameState.player.gold || 0) +
-    ' | \uD83C\uDCCF ' + gameState.player.deck.length + ' cards';
+  info.innerHTML = '⚡ HULL ' + gameState.player.currentHp + '/' + gameState.player.maxHp +
+    ' │ ' + T('gold') + ': ' + (gameState.player.gold || 0) +
+    ' │ PROGRAMS: ' + gameState.player.deck.length;
 
   var deckBtn = document.createElement('button');
   deckBtn.className = 'btn btn-secondary';
   deckBtn.style.cssText = 'margin-top:10px;font-size:13px;padding:6px 18px;';
-  deckBtn.textContent = 'View Deck (' + gameState.player.deck.length + ')';
+  deckBtn.textContent = T('viewDeck') + ' (' + gameState.player.deck.length + ')';
   deckBtn.addEventListener('click', function() {
     showPileViewer('Your Deck', gameState.player.deck);
   });
@@ -1022,6 +1274,10 @@ function _showRestScreen() {
   var screen = document.getElementById('rest-screen');
   screen.classList.remove('hidden');
 
+  // Update rest screen title dynamically
+  var restTitle = screen.querySelector('.overlay-title');
+  if (restTitle) restTitle.textContent = T('rest');
+
   var options = document.getElementById('rest-options');
   options.innerHTML = '';
 
@@ -1030,10 +1286,10 @@ function _showRestScreen() {
   var restBtn = document.createElement('button');
   restBtn.className = 'btn btn-primary';
   restBtn.style.cssText = 'margin:8px;';
-  restBtn.textContent = 'Rest (Heal ' + healAmount + ' HP)';
+  restBtn.textContent = T('restHeal') + ' (' + T('heal') + ' ' + healAmount + ' ' + T('hp') + ')';
   restBtn.addEventListener('click', function() {
     gameState.player.currentHp = Math.min(gameState.player.maxHp, gameState.player.currentHp + healAmount);
-    log('Rested. Healed ' + healAmount + ' HP.');
+    log(T('restHeal') + '. ' + T('heal') + 'ed ' + healAmount + ' ' + T('hp') + '.');
     returnToMap();
   });
   options.appendChild(restBtn);
@@ -1043,7 +1299,7 @@ function _showRestScreen() {
   var smithBtn = document.createElement('button');
   smithBtn.className = 'btn btn-primary';
   smithBtn.style.cssText = 'margin:8px;';
-  smithBtn.textContent = 'Smith (Upgrade a card)';
+  smithBtn.textContent = T('restUpgrade') + ' (Upgrade a card)';
   smithBtn.disabled = !hasUpgradeable;
   smithBtn.addEventListener('click', function() {
     _hideOverlays();
@@ -1076,8 +1332,8 @@ function showUpgradeScreen() {
     el.innerHTML = '<div class="card-cost">' + card.cost + '</div>' +
       '<div class="card-name">' + card.name + '</div>' +
       '<div class="card-type-label">' + card.type + '</div>' +
-      '<div class="card-art">' + card.art + '</div>' +
-      '<div class="card-description">' + card.description + '</div>' +
+      '<div class="card-art">' + _cardArtHTML(card.art) + '</div>' +
+      '<div class="card-description">' + Td(card.description) + '</div>' +
       _getRarityDotHTML(card);
 
     (function(idx) {
@@ -1118,8 +1374,8 @@ function showUpgradePreview(deckIndex) {
   beforeCard.innerHTML = '<div class="card-cost">' + card.cost + '</div>' +
     '<div class="card-name">' + card.name + '</div>' +
     '<div class="card-type-label">' + card.type + '</div>' +
-    '<div class="card-art">' + card.art + '</div>' +
-    '<div class="card-description">' + card.description + '</div>';
+    '<div class="card-art">' + _cardArtHTML(card.art) + '</div>' +
+    '<div class="card-description">' + Td(card.description) + '</div>';
 
   // Arrow
   var arrow = document.createElement('div');
@@ -1133,8 +1389,8 @@ function showUpgradePreview(deckIndex) {
   afterCard.innerHTML = '<div class="card-cost">' + afterCost + '</div>' +
     '<div class="card-name">' + upgrade.name + '</div>' +
     '<div class="card-type-label">' + card.type + '</div>' +
-    '<div class="card-art">' + card.art + '</div>' +
-    '<div class="card-description">' + upgrade.description + '</div>';
+    '<div class="card-art">' + _cardArtHTML(card.art) + '</div>' +
+    '<div class="card-description">' + Td(upgrade.description) + '</div>';
 
   previewDiv.appendChild(beforeCard);
   previewDiv.appendChild(arrow);
@@ -1162,7 +1418,7 @@ function showUpgradePreview(deckIndex) {
   backBtn.style.cssText = 'height:44px;';
   backBtn.textContent = 'Back';
   backBtn.addEventListener('click', function() {
-    if (subtitle) subtitle.textContent = 'Click a card to upgrade it:';
+    if (subtitle) subtitle.textContent = 'Click a module to upgrade it:';
     showUpgradeScreen();
   });
 
@@ -1183,6 +1439,10 @@ function _showShopScreen() {
   var screen = document.getElementById('shop-screen');
   screen.classList.remove('hidden');
 
+  // Update shop title dynamically
+  var shopTitle = screen.querySelector('.overlay-title');
+  if (shopTitle) shopTitle.textContent = T('shopTitle');
+
   var shop = generateShop();
   gameState.currentShop = shop;
 
@@ -1192,7 +1452,7 @@ function _showShopScreen() {
 function renderShopItems() {
   var shop = gameState.currentShop;
   var goldEl = document.getElementById('shop-gold');
-  goldEl.textContent = '\uD83D\uDCB0 ' + (gameState.player.gold || 0) + ' Gold';
+  goldEl.textContent = '\uD83D\uDCB0 ' + (gameState.player.gold || 0) + ' ' + T('gold');
 
   var container = document.getElementById('shop-items');
   container.innerHTML = '';
@@ -1202,12 +1462,25 @@ function renderShopItems() {
     if (shop.cards[i].sold) continue;
     var item = shop.cards[i];
     var el = document.createElement('div');
-    el.className = 'shop-item';
+    el.className = 'shop-item shop-card-item';
     var canAfford = gameState.player.gold >= item.price;
-    el.innerHTML = '<div class="shop-card-preview">' + item.card.art + '</div>' +
-      '<div class="shop-item-name">' + item.card.name + '</div>' +
-      '<div class="shop-item-desc">' + item.card.description + '</div>' +
-      '<div class="shop-price' + (canAfford ? '' : ' too-expensive') + '">' + item.price + ' \uD83D\uDCB0</div>';
+
+    // Full card template matching hand cards
+    var cardDiv = document.createElement('div');
+    cardDiv.className = 'card type-' + item.card.type + ' shop-card' +
+      (item.card.upgraded ? ' upgraded' : '');
+    cardDiv.innerHTML = '<div class="card-cost">' + (item.card.cost === 'X' ? 'X' : item.card.cost) + '</div>' +
+      '<div class="card-name">' + item.card.name + '</div>' +
+      '<div class="card-type-label">' + item.card.type + '</div>' +
+      '<div class="card-art">' + _cardArtHTML(item.card.art) + '</div>' +
+      '<div class="card-description">' + Td(item.card.description) + '</div>' +
+      _getRarityDotHTML(item.card);
+    el.appendChild(cardDiv);
+
+    var priceDiv = document.createElement('div');
+    priceDiv.className = 'shop-price' + (canAfford ? '' : ' too-expensive');
+    priceDiv.textContent = item.price + ' \uD83D\uDCB0';
+    el.appendChild(priceDiv);
 
     if (canAfford) {
       (function(idx) {
@@ -1254,8 +1527,8 @@ function renderShopItems() {
   removeEl.className = 'shop-item shop-remove';
   var removeCanAfford = gameState.player.gold >= shop.removeCost;
   removeEl.innerHTML = '<div class="shop-card-preview">\uD83D\uDDD1\uFE0F</div>' +
-    '<div class="shop-item-name">Remove a Card</div>' +
-    '<div class="shop-item-desc">Remove a card from your deck</div>' +
+    '<div class="shop-item-name">' + T('removeCard') + '</div>' +
+    '<div class="shop-item-desc">Remove a card from your ' + T('deck').toLowerCase() + '</div>' +
     '<div class="shop-price' + (removeCanAfford ? '' : ' too-expensive') + '">' + shop.removeCost + ' \uD83D\uDCB0</div>';
 
   if (removeCanAfford) {
@@ -1283,8 +1556,8 @@ function showRemoveScreen() {
     el.innerHTML = '<div class="card-cost">' + card.cost + '</div>' +
       '<div class="card-name">' + card.name + '</div>' +
       '<div class="card-type-label">' + card.type + '</div>' +
-      '<div class="card-art">' + card.art + '</div>' +
-      '<div class="card-description">' + card.description + '</div>' +
+      '<div class="card-art">' + _cardArtHTML(card.art) + '</div>' +
+      '<div class="card-description">' + Td(card.description) + '</div>' +
       _getRarityDotHTML(card);
 
     (function(idx) {
@@ -1447,8 +1720,8 @@ function showPileViewer(title, cards) {
     el.innerHTML = '<div class="card-cost">' + card.cost + '</div>' +
       '<div class="card-name">' + card.name + '</div>' +
       '<div class="card-type-label">' + card.type + '</div>' +
-      '<div class="card-art">' + card.art + '</div>' +
-      '<div class="card-description">' + card.description + '</div>' +
+      '<div class="card-art">' + _cardArtHTML(card.art) + '</div>' +
+      '<div class="card-description">' + Td(card.description) + '</div>' +
       _getRarityDotHTML(card);
     container.appendChild(el);
   }
@@ -1540,11 +1813,110 @@ function showTurnBanner(text, type) {
   }, 1200);
 }
 
-// === MUTE TOGGLE ===
-function toggleMute() {
-  if (typeof AudioManager === 'undefined') return;
-  AudioManager.enabled = !AudioManager.enabled;
-  document.getElementById('mute-btn').textContent = AudioManager.enabled ? '🔊' : '🔇';
+// === TOP BAR BUTTONS ===
+document.getElementById('map-btn').addEventListener('click', function() {
+  // Only show map if not already on map and game has started
+  if (!gameState.map) return;
+  var mapScreen = document.getElementById('map-screen');
+  if (!mapScreen.classList.contains('hidden')) {
+    _hideOverlays();
+    _renderCombat();
+    return;
+  }
+  _showMapScreen();
+});
+
+document.getElementById('deck-btn').addEventListener('click', function() {
+  if (!gameState.player || !gameState.player.deck) return;
+  var pileViewer = document.getElementById('pile-viewer');
+  if (!pileViewer.classList.contains('hidden')) {
+    _hideOverlays();
+    _renderCombat();
+    return;
+  }
+  showPileViewer('Your Deck', gameState.player.deck);
+});
+
+document.getElementById('settings-btn').addEventListener('click', function() {
+  var settingsScreen = document.getElementById('settings-screen');
+  if (!settingsScreen.classList.contains('hidden')) {
+    closeSettings();
+    return;
+  }
+  showSettings();
+});
+
+function showSettings() {
+  var screen = document.getElementById('settings-screen');
+  screen.classList.remove('hidden');
+
+  var content = document.getElementById('settings-content');
+  content.innerHTML = '';
+
+  // Sound toggle
+  var soundRow = document.createElement('div');
+  soundRow.className = 'settings-row';
+  soundRow.innerHTML = '<label>Sound Effects</label>';
+  var soundToggle = document.createElement('button');
+  soundToggle.className = 'settings-toggle' + (typeof AudioManager !== 'undefined' && AudioManager.enabled ? ' active' : '');
+  soundToggle.addEventListener('click', function() {
+    if (typeof AudioManager === 'undefined') return;
+    AudioManager.enabled = !AudioManager.enabled;
+    soundToggle.className = 'settings-toggle' + (AudioManager.enabled ? ' active' : '');
+  });
+  soundRow.appendChild(soundToggle);
+  content.appendChild(soundRow);
+
+  // Screen shake toggle
+  var shakeRow = document.createElement('div');
+  shakeRow.className = 'settings-row';
+  shakeRow.innerHTML = '<label>Screen Shake</label>';
+  var shakeToggle = document.createElement('button');
+  window._screenShakeEnabled = window._screenShakeEnabled !== false;
+  shakeToggle.className = 'settings-toggle' + (window._screenShakeEnabled ? ' active' : '');
+  shakeToggle.addEventListener('click', function() {
+    window._screenShakeEnabled = !window._screenShakeEnabled;
+    shakeToggle.className = 'settings-toggle' + (window._screenShakeEnabled ? ' active' : '');
+  });
+  shakeRow.appendChild(shakeToggle);
+  content.appendChild(shakeRow);
+
+  // Screen effects toggle
+  var fxRow = document.createElement('div');
+  fxRow.className = 'settings-row';
+  fxRow.innerHTML = '<label>Screen Effects</label>';
+  var fxToggle = document.createElement('button');
+  window._screenEffectsEnabled = window._screenEffectsEnabled !== false;
+  fxToggle.className = 'settings-toggle' + (window._screenEffectsEnabled ? ' active' : '');
+  fxToggle.addEventListener('click', function() {
+    window._screenEffectsEnabled = !window._screenEffectsEnabled;
+    fxToggle.className = 'settings-toggle' + (window._screenEffectsEnabled ? ' active' : '');
+    // Toggle CRT scanlines
+    var gc = document.getElementById('game-container');
+    if (gc) gc.classList.toggle('no-screen-fx', !window._screenEffectsEnabled);
+  });
+  fxRow.appendChild(fxToggle);
+  content.appendChild(fxRow);
+
+  // Tutorial reset
+  var tutRow = document.createElement('div');
+  tutRow.className = 'settings-row';
+  tutRow.innerHTML = '<label>Reset Tutorial</label>';
+  var tutBtn = document.createElement('button');
+  tutBtn.className = 'btn btn-secondary';
+  tutBtn.style.cssText = 'font-size:12px;padding:4px 12px;min-height:auto;';
+  tutBtn.textContent = 'Reset';
+  tutBtn.addEventListener('click', function() {
+    localStorage.removeItem('stsTutorialSeen');
+    tutBtn.textContent = 'Done!';
+    setTimeout(function() { tutBtn.textContent = 'Reset'; }, 1500);
+  });
+  tutRow.appendChild(tutBtn);
+  content.appendChild(tutRow);
+}
+
+function closeSettings() {
+  document.getElementById('settings-screen').classList.add('hidden');
 }
 
 // === TUTORIAL ===
@@ -1570,7 +1942,7 @@ function _showStartScreen() {
     var continueBtn = document.createElement('button');
     continueBtn.className = 'btn btn-primary';
     continueBtn.style.cssText = 'margin:8px;display:block;width:250px;';
-    continueBtn.textContent = 'Continue Run';
+    continueBtn.textContent = '▶ CONTINUE MISSION';
     continueBtn.addEventListener('click', function() {
       _hideOverlays();
       if (loadGame()) {
@@ -1591,7 +1963,7 @@ function _showStartScreen() {
   seedInput.type = 'text';
   seedInput.id = 'seed-input';
   seedInput.className = 'seed-input';
-  seedInput.placeholder = 'Enter seed (optional)';
+  seedInput.placeholder = 'MISSION SEED (OPTIONAL)';
   seedInput.maxLength = 20;
   seedContainer.appendChild(seedInput);
   options.appendChild(seedContainer);
@@ -1599,7 +1971,7 @@ function _showStartScreen() {
   var newBtn = document.createElement('button');
   newBtn.className = 'btn btn-secondary';
   newBtn.style.cssText = 'margin:8px;display:block;width:250px;';
-  newBtn.textContent = 'New Run';
+  newBtn.textContent = '+ NEW MISSION';
   newBtn.addEventListener('click', function() {
     clearSave();
     _hideOverlays();
@@ -1613,7 +1985,7 @@ function _showStartScreen() {
   if (highScore > 0) {
     var hsDiv = document.createElement('div');
     hsDiv.className = 'start-high-score';
-    hsDiv.textContent = 'High Score: ' + highScore;
+    hsDiv.textContent = '★ HIGH SCORE: ' + highScore;
     options.appendChild(hsDiv);
   }
 }

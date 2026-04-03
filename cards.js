@@ -2,10 +2,10 @@
 var CARD_DATABASE = {
   strike: {
     id: 'strike',
-    name: 'Strike',
+    name: 'Laser Blast',
     type: 'attack',
     cost: 1,
-    art: '⚔️',
+    art: 'assets/cards/laser-blast.png',
     description: 'Deal 6 damage.',
     effects: [{ type: 'damage', value: 6 }],
     rarity: 'starter',
@@ -13,22 +13,22 @@ var CARD_DATABASE = {
   },
   defend: {
     id: 'defend',
-    name: 'Defend',
+    name: 'Energy Shield',
     type: 'skill',
     cost: 1,
-    art: '🛡️',
-    description: 'Gain 5 Block.',
+    art: 'assets/cards/energy-shield.png',
+    description: 'Gain 5 {block}.',
     effects: [{ type: 'block', value: 5 }],
     rarity: 'starter',
     needsTarget: false
   },
   bash: {
     id: 'bash',
-    name: 'Bash',
+    name: 'Stun Grenade',
     type: 'attack',
     cost: 2,
-    art: '🔨',
-    description: 'Deal 8 damage. Apply 2 Vulnerable.',
+    art: 'assets/cards/stun-grenade.png',
+    description: 'Deal 8 damage. Apply 2 {vulnerable}.',
     effects: [
       { type: 'damage', value: 8 },
       { type: 'applyStatus', status: 'vulnerable', value: 2 }
@@ -38,10 +38,10 @@ var CARD_DATABASE = {
   },
   cleave: {
     id: 'cleave',
-    name: 'Cleave',
+    name: 'Plasma Sweep',
     type: 'attack',
     cost: 1,
-    art: '🪓',
+    art: 'assets/cards/plasma-sweep.png',
     description: 'Deal 9 damage to ALL enemies.',
     effects: [{ type: 'damageAll', value: 9 }],
     rarity: 'common',
@@ -49,11 +49,11 @@ var CARD_DATABASE = {
   },
   pommel_strike: {
     id: 'pommel_strike',
-    name: 'Pommel Strike',
+    name: 'Pistol Whip',
     type: 'attack',
     cost: 1,
-    art: '👊',
-    description: 'Deal 9 damage. Draw 1 card.',
+    art: 'assets/cards/pistol-whip.png',
+    description: 'Deal 9 damage. {draw} 1 card.',
     effects: [
       { type: 'damage', value: 9 },
       { type: 'drawCards', value: 1 }
@@ -63,11 +63,11 @@ var CARD_DATABASE = {
   },
   shrug_it_off: {
     id: 'shrug_it_off',
-    name: 'Shrug It Off',
+    name: 'Deflector Boost',
     type: 'skill',
     cost: 1,
-    art: '💪',
-    description: 'Gain 8 Block. Draw 1 card.',
+    art: 'assets/cards/deflector-boost.png',
+    description: 'Gain 8 {block}. {draw} 1 card.',
     effects: [
       { type: 'block', value: 8 },
       { type: 'drawCards', value: 1 }
@@ -77,22 +77,22 @@ var CARD_DATABASE = {
   },
   inflame: {
     id: 'inflame',
-    name: 'Inflame',
+    name: 'Overclock',
     type: 'power',
     cost: 1,
-    art: '🔥',
-    description: 'Gain 2 Strength.',
+    art: 'assets/cards/overclock.png',
+    description: 'Gain 2 {strength}.',
     effects: [{ type: 'applyBuff', status: 'strength', value: 2 }],
     rarity: 'uncommon',
     needsTarget: false
   },
   uppercut: {
     id: 'uppercut',
-    name: 'Uppercut',
+    name: 'Concussion Shot',
     type: 'attack',
     cost: 2,
-    art: '🥊',
-    description: 'Deal 13 damage. Apply 1 Weak. Apply 1 Vulnerable.',
+    art: 'assets/cards/concussion-shot.png',
+    description: 'Deal 13 damage. Apply 1 {weak}. Apply 1 {vulnerable}.',
     effects: [
       { type: 'damage', value: 13 },
       { type: 'applyStatus', status: 'weak', value: 1 },
@@ -103,10 +103,10 @@ var CARD_DATABASE = {
   },
   bludgeon: {
     id: 'bludgeon',
-    name: 'Bludgeon',
+    name: 'Orbital Strike',
     type: 'attack',
     cost: 3,
-    art: '💥',
+    art: 'assets/cards/orbital-strike.png',
     description: 'Deal 32 damage.',
     effects: [{ type: 'damage', value: 32 }],
     rarity: 'rare',
@@ -115,19 +115,19 @@ var CARD_DATABASE = {
 
   // === Phase 2: 0-cost combo cards ===
   anger: {
-    id: 'anger', name: 'Anger', type: 'attack', cost: 0, art: '😠',
+    id: 'anger', name: 'Overcharge', type: 'attack', cost: 0, art: 'assets/cards/overcharge.png',
     description: 'Deal 6 damage. Add a copy to discard.',
     effects: [{ type: 'damage', value: 6 }, { type: 'addCopy' }],
     rarity: 'common', needsTarget: true
   },
   flex: {
-    id: 'flex', name: 'Flex', type: 'skill', cost: 0, art: '💪',
-    description: 'Gain 2 Strength this turn only.',
+    id: 'flex', name: 'Adrenaline Boost', type: 'skill', cost: 0, art: 'assets/cards/adrenaline-boost.png',
+    description: 'Gain 2 {strength} this {turn} only.',
     effects: [{ type: 'tempBuff', status: 'strength', value: 2 }],
     rarity: 'common', needsTarget: false
   },
   clash: {
-    id: 'clash', name: 'Clash', type: 'attack', cost: 0, art: '⚡',
+    id: 'clash', name: 'Full Burst', type: 'attack', cost: 0, art: 'assets/cards/full-burst.png',
     description: 'Deal 14 damage. Only playable if hand is all Attacks.',
     effects: [{ type: 'damage', value: 14 }],
     rarity: 'common', needsTarget: true,
@@ -136,67 +136,67 @@ var CARD_DATABASE = {
 
   // === Phase 2: Exhaust cards ===
   offering: {
-    id: 'offering', name: 'Offering', type: 'skill', cost: 0, art: '🩸',
-    description: 'Lose 6 HP. Gain 2 Energy. Draw 3 cards. Exhaust.',
+    id: 'offering', name: 'Emergency Protocol', type: 'skill', cost: 0, art: 'assets/cards/emergency-protocol.png',
+    description: 'Lose 6 {hp}. Gain 2 Energy. {draw} 3 cards. {exhaust}.',
     effects: [{ type: 'losehp', value: 6 }, { type: 'gainEnergy', value: 2 }, { type: 'drawCards', value: 3 }],
     rarity: 'uncommon', needsTarget: false, exhaust: true
   },
   true_grit: {
-    id: 'true_grit', name: 'True Grit', type: 'skill', cost: 1, art: '🪨',
-    description: 'Gain 7 Block. Exhaust a random card from hand.',
+    id: 'true_grit', name: 'Jettison', type: 'skill', cost: 1, art: 'assets/cards/jettison.png',
+    description: 'Gain 7 {block}. {exhaust} a random card from hand.',
     effects: [{ type: 'block', value: 7 }, { type: 'exhaustRandom' }],
     rarity: 'common', needsTarget: false
   },
   seeing_red: {
-    id: 'seeing_red', name: 'Seeing Red', type: 'skill', cost: 1, art: '👁️',
-    description: 'Gain 2 Energy. Exhaust.',
+    id: 'seeing_red', name: 'Reactor Surge', type: 'skill', cost: 1, art: 'assets/cards/reactor-surge.png',
+    description: 'Gain 2 Energy. {exhaust}.',
     effects: [{ type: 'gainEnergy', value: 2 }],
     rarity: 'uncommon', needsTarget: false, exhaust: true
   },
 
   // === Phase 2: Block cards ===
   body_slam: {
-    id: 'body_slam', name: 'Body Slam', type: 'attack', cost: 1, art: '🏋️',
-    description: 'Deal damage equal to your Block.',
+    id: 'body_slam', name: 'Jetpack Ram', type: 'attack', cost: 1, art: 'assets/cards/jetpack-ram.png',
+    description: 'Deal damage equal to your {block}.',
     effects: [{ type: 'conditional_damage', condition: 'block', multiplier: 1 }],
     rarity: 'common', needsTarget: true
   },
   iron_wave: {
-    id: 'iron_wave', name: 'Iron Wave', type: 'attack', cost: 1, art: '🌊',
-    description: 'Gain 5 Block. Deal 5 damage.',
+    id: 'iron_wave', name: 'Shield Bash', type: 'attack', cost: 1, art: 'assets/cards/shield-bash.png',
+    description: 'Gain 5 {block}. Deal 5 damage.',
     effects: [{ type: 'block', value: 5 }, { type: 'damage', value: 5 }],
     rarity: 'common', needsTarget: true
   },
   entrench: {
-    id: 'entrench', name: 'Entrench', type: 'skill', cost: 2, art: '🏰',
-    description: 'Double your current Block.',
+    id: 'entrench', name: 'Reinforce Hull', type: 'skill', cost: 2, art: 'assets/cards/reinforce-hull.png',
+    description: 'Double your current {block}.',
     effects: [{ type: 'doubleBlock' }],
     rarity: 'uncommon', needsTarget: false
   },
 
   // === Phase 2: Draw/pile cards ===
   battle_trance: {
-    id: 'battle_trance', name: 'Battle Trance', type: 'skill', cost: 0, art: '🧘',
-    description: 'Draw 3 cards. You cannot draw additional cards this turn.',
+    id: 'battle_trance', name: 'Combat Focus', type: 'skill', cost: 0, art: 'assets/cards/combat-focus.png',
+    description: '{draw} 3 cards. You cannot {draw} additional cards this {turn}.',
     effects: [{ type: 'drawCards', value: 3 }, { type: 'setFlag', flag: 'noDraw' }],
     rarity: 'uncommon', needsTarget: false
   },
 
   // === Phase 2: Damage scaling ===
   heavy_blade: {
-    id: 'heavy_blade', name: 'Heavy Blade', type: 'attack', cost: 2, art: '🗡️',
-    description: 'Deal 14 damage. Strength x3.',
+    id: 'heavy_blade', name: 'Power Drill', type: 'attack', cost: 2, art: 'assets/cards/power-drill.png',
+    description: 'Deal 14 damage. {strength} x3.',
     effects: [{ type: 'heavyDamage', value: 14, strengthMultiplier: 3 }],
     rarity: 'common', needsTarget: true
   },
   twin_strike: {
-    id: 'twin_strike', name: 'Twin Strike', type: 'attack', cost: 1, art: '✂️',
+    id: 'twin_strike', name: 'Double Tap', type: 'attack', cost: 1, art: 'assets/cards/double-tap.png',
     description: 'Deal 5 damage twice.',
     effects: [{ type: 'multiDamage', value: 5, hits: 2 }],
     rarity: 'common', needsTarget: true
   },
   whirlwind: {
-    id: 'whirlwind', name: 'Whirlwind', type: 'attack', cost: 'X', art: '🌀',
+    id: 'whirlwind', name: 'Ion Storm', type: 'attack', cost: 'X', art: 'assets/cards/ion-storm.png',
     description: 'Deal 5 damage to ALL enemies X times.',
     effects: [{ type: 'damageAllX', value: 5 }],
     rarity: 'uncommon', needsTarget: false
@@ -204,153 +204,153 @@ var CARD_DATABASE = {
 
   // === Phase 2: Powers ===
   metallicize: {
-    id: 'metallicize', name: 'Metallicize', type: 'power', cost: 1, art: '⚙️',
-    description: 'At end of turn, gain 3 Block.',
+    id: 'metallicize', name: 'Auto-Repair', type: 'power', cost: 1, art: 'assets/cards/auto-repair.png',
+    description: 'At end of {turn}, gain 3 {block}.',
     effects: [{ type: 'addPower', power: 'metallicize', value: 3 }],
     rarity: 'uncommon', needsTarget: false
   },
   demon_form: {
-    id: 'demon_form', name: 'Demon Form', type: 'power', cost: 3, art: '😈',
-    description: 'At start of turn, gain 2 Strength.',
+    id: 'demon_form', name: 'Rage Protocol', type: 'power', cost: 3, art: 'assets/cards/rage-protocol.png',
+    description: 'At start of {turn}, gain 2 {strength}.',
     effects: [{ type: 'addPower', power: 'demon_form', value: 2 }],
     rarity: 'rare', needsTarget: false
   },
   barricade: {
-    id: 'barricade', name: 'Barricade', type: 'power', cost: 3, art: '🏗️',
-    description: 'Block no longer expires at start of turn.',
+    id: 'barricade', name: 'Fortress Mode', type: 'power', cost: 3, art: 'assets/cards/fortress-mode.png',
+    description: '{block} no longer expires at start of {turn}.',
     effects: [{ type: 'addPower', power: 'barricade', value: 1 }],
     rarity: 'rare', needsTarget: false
   },
 
   // === Phase 3: New cards ===
   thunderclap: {
-    id: 'thunderclap', name: 'Thunderclap', type: 'attack', cost: 1, art: '⚡',
-    description: 'Deal 4 damage to ALL enemies. Apply 1 Vulnerable to ALL.',
+    id: 'thunderclap', name: 'EMP Blast', type: 'attack', cost: 1, art: 'assets/cards/emp-blast.png',
+    description: 'Deal 4 damage to ALL enemies. Apply 1 {vulnerable} to ALL.',
     effects: [{ type: 'damageAll', value: 4 }, { type: 'applyStatusAll', status: 'vulnerable', value: 1 }],
     rarity: 'common', needsTarget: false
   },
   headbutt: {
-    id: 'headbutt', name: 'Headbutt', type: 'attack', cost: 1, art: '🤕',
-    description: 'Deal 9 damage. Put a card from discard on top of draw pile.',
+    id: 'headbutt', name: 'Helmet Charge', type: 'attack', cost: 1, art: 'assets/cards/helmet-charge.png',
+    description: 'Deal 9 damage. Put a card from discard on top of {draw} pile.',
     effects: [{ type: 'damage', value: 9 }, { type: 'headbutt' }],
     rarity: 'common', needsTarget: true
   },
   armaments: {
-    id: 'armaments', name: 'Armaments', type: 'skill', cost: 1, art: '🔧',
-    description: 'Gain 5 Block. Upgrade a random card in hand for this combat.',
+    id: 'armaments', name: 'Field Repair', type: 'skill', cost: 1, art: 'assets/cards/field-repair.png',
+    description: 'Gain 5 {block}. Upgrade a random card in hand for this combat.',
     effects: [{ type: 'block', value: 5 }, { type: 'tempUpgrade' }],
     rarity: 'common', needsTarget: false
   },
   warcry: {
-    id: 'warcry', name: 'Warcry', type: 'skill', cost: 0, art: '📣',
-    description: 'Draw 2 cards. Put a card from hand on top of draw pile. Exhaust.',
+    id: 'warcry', name: 'Battle Comm', type: 'skill', cost: 0, art: 'assets/cards/battle-comm.png',
+    description: '{draw} 2 cards. Put a card from hand on top of {draw} pile. {exhaust}.',
     effects: [{ type: 'drawCards', value: 2 }, { type: 'putBack' }],
     rarity: 'common', needsTarget: false, exhaust: true
   },
   sentinel: {
-    id: 'sentinel', name: 'Sentinel', type: 'skill', cost: 1, art: '🛡️',
-    description: 'Gain 5 Block. If Exhausted, gain 2 Energy.',
+    id: 'sentinel', name: 'Bulkhead', type: 'skill', cost: 1, art: 'assets/cards/bulkhead.png',
+    description: 'Gain 5 {block}. If {exhausted}, gain 2 Energy.',
     effects: [{ type: 'block', value: 5 }],
     rarity: 'common', needsTarget: false,
     onExhaust: { type: 'gainEnergy', value: 2 }
   },
   rampage: {
-    id: 'rampage', name: 'Rampage', type: 'attack', cost: 1, art: '🔨',
+    id: 'rampage', name: 'Escalation Protocol', type: 'attack', cost: 1, art: 'assets/cards/escalation-protocol.png',
     description: 'Deal 8 damage. Damage increases by 5 each play.',
     effects: [{ type: 'rampage', value: 8, increment: 5 }],
     rarity: 'uncommon', needsTarget: true
   },
   pummel: {
-    id: 'pummel', name: 'Pummel', type: 'attack', cost: 1, art: '👊',
+    id: 'pummel', name: 'Rapid Fire', type: 'attack', cost: 1, art: 'assets/cards/rapid-fire.png',
     description: 'Deal 2 damage 4 times.',
     effects: [{ type: 'multiDamage', value: 2, hits: 4 }],
     rarity: 'uncommon', needsTarget: true
   },
   disarm: {
-    id: 'disarm', name: 'Disarm', type: 'skill', cost: 1, art: '🚫',
-    description: 'Reduce enemy Strength by 2. Exhaust.',
+    id: 'disarm', name: 'Disable Targeting', type: 'skill', cost: 1, art: 'assets/cards/disable-targeting.png',
+    description: 'Reduce enemy {strength} by 2. {exhaust}.',
     effects: [{ type: 'reduceStrength', value: 2 }],
     rarity: 'uncommon', needsTarget: true, exhaust: true
   },
   power_through: {
-    id: 'power_through', name: 'Power Through', type: 'skill', cost: 1, art: '💪',
-    description: 'Add 2 Wounds to hand. Gain 15 Block.',
+    id: 'power_through', name: 'Brace for Impact', type: 'skill', cost: 1, art: 'assets/cards/brace-for-impact.png',
+    description: 'Add 2 Wounds to hand. Gain 15 {block}.',
     effects: [{ type: 'addWounds', value: 2 }, { type: 'block', value: 15 }],
     rarity: 'uncommon', needsTarget: false
   },
   shockwave: {
-    id: 'shockwave', name: 'Shockwave', type: 'skill', cost: 2, art: '🌊',
-    description: 'Apply 3 Weak and 3 Vulnerable to ALL enemies. Exhaust.',
+    id: 'shockwave', name: 'Disruption Wave', type: 'skill', cost: 2, art: 'assets/cards/disruption-wave.png',
+    description: 'Apply 3 {weak} and 3 {vulnerable} to ALL enemies. {exhaust}.',
     effects: [{ type: 'applyStatusAll', status: 'weak', value: 3 }, { type: 'applyStatusAll', status: 'vulnerable', value: 3 }],
     rarity: 'uncommon', needsTarget: false, exhaust: true
   },
   feel_no_pain: {
-    id: 'feel_no_pain', name: 'Feel No Pain', type: 'power', cost: 1, art: '😤',
-    description: 'Whenever a card is Exhausted, gain 3 Block.',
+    id: 'feel_no_pain', name: 'Feedback Loop', type: 'power', cost: 1, art: 'assets/cards/feedback-loop.png',
+    description: 'Whenever a card is {exhausted}, gain 3 {block}.',
     effects: [{ type: 'addPower', power: 'feelNoPain', value: 3 }],
     rarity: 'uncommon', needsTarget: false
   },
   limit_break: {
-    id: 'limit_break', name: 'Limit Break', type: 'skill', cost: 1, art: '💥',
-    description: 'Double your Strength. Exhaust.',
+    id: 'limit_break', name: 'System Override', type: 'skill', cost: 1, art: 'assets/cards/system-override.png',
+    description: 'Double your {strength}. {exhaust}.',
     effects: [{ type: 'limitBreak' }],
     rarity: 'rare', needsTarget: false, exhaust: true
   },
   reaper: {
-    id: 'reaper', name: 'Reaper', type: 'attack', cost: 2, art: '💀',
-    description: 'Deal 4 damage to ALL enemies. Heal HP equal to unblocked damage dealt.',
+    id: 'reaper', name: 'Nano Leech', type: 'attack', cost: 2, art: 'assets/cards/nano-leech.png',
+    description: 'Deal 4 damage to ALL enemies. {heal} {hp} equal to unblocked damage dealt.',
     effects: [{ type: 'reaper', value: 4 }],
     rarity: 'rare', needsTarget: false
   },
   corruption: {
-    id: 'corruption', name: 'Corruption', type: 'power', cost: 3, art: '🖤',
-    description: 'Skills cost 0 but Exhaust when played.',
+    id: 'corruption', name: 'Malware', type: 'power', cost: 3, art: 'assets/cards/malware.png',
+    description: 'Skills cost 0 but {exhaust} when played.',
     effects: [{ type: 'addPower', power: 'corruption', value: 1 }],
     rarity: 'rare', needsTarget: false
   },
   impervious: {
-    id: 'impervious', name: 'Impervious', type: 'skill', cost: 2, art: '🏰',
-    description: 'Gain 30 Block. Exhaust.',
+    id: 'impervious', name: 'Titanium Shell', type: 'skill', cost: 2, art: 'assets/cards/titanium-shell.png',
+    description: 'Gain 30 {block}. {exhaust}.',
     effects: [{ type: 'block', value: 30 }],
     rarity: 'rare', needsTarget: false, exhaust: true
   },
 
   // === Status cards (added by enemies) ===
   dazed: {
-    id: 'dazed', name: 'Dazed', type: 'status', cost: 0, art: '💫',
-    description: 'Unplayable. Ethereal.',
+    id: 'dazed', name: 'Scrambled', type: 'status', cost: 0, art: 'assets/cards/scrambled.png',
+    description: 'Unplayable. {ethereal}.',
     effects: [], rarity: 'status', needsTarget: false,
     playable: false, ethereal: true
   },
   wound: {
-    id: 'wound', name: 'Wound', type: 'status', cost: 0, art: '🩹',
+    id: 'wound', name: 'Hull Breach', type: 'status', cost: 0, art: 'assets/cards/hull-breach.png',
     description: 'Unplayable.',
     effects: [], rarity: 'status', needsTarget: false,
     playable: false
   },
   slimed: {
-    id: 'slimed', name: 'Slimed', type: 'status', cost: 1, art: '🟢',
-    description: 'Exhaust.',
+    id: 'slimed', name: 'Corroded', type: 'status', cost: 1, art: 'assets/cards/corroded.png',
+    description: '{exhaust}.',
     effects: [], rarity: 'status', needsTarget: false,
     exhaust: true
   },
 
   // === Curse cards ===
   regret: {
-    id: 'regret', name: 'Regret', type: 'curse', cost: 0, art: '😰',
-    description: 'Unplayable. End of turn: lose 1 HP per card in hand.',
+    id: 'regret', name: 'System Error', type: 'curse', cost: 0, art: 'assets/cards/system-error.png',
+    description: 'Unplayable. End of {turn}: lose 1 {hp} per card in hand.',
     effects: [], rarity: 'curse', needsTarget: false,
     playable: false
   },
   parasite: {
-    id: 'parasite', name: 'Parasite', type: 'curse', cost: 0, art: '🦠',
-    description: 'Unplayable. If removed, heal 6 HP.',
+    id: 'parasite', name: 'Malware Worm', type: 'curse', cost: 0, art: 'assets/cards/malware-worm.png',
+    description: 'Unplayable. If removed, {heal} 6 {hp}.',
     effects: [], rarity: 'curse', needsTarget: false,
     playable: false
   },
   doubt: {
-    id: 'doubt', name: 'Doubt', type: 'curse', cost: 0, art: '😟',
-    description: 'Unplayable. Start of turn: gain 1 Weak.',
+    id: 'doubt', name: 'Glitch', type: 'curse', cost: 0, art: 'assets/cards/glitch.png',
+    description: 'Unplayable. Start of {turn}: gain 1 {weak}.',
     effects: [], rarity: 'curse', needsTarget: false,
     playable: false
   }

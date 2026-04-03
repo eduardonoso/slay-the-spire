@@ -36,14 +36,14 @@ function initSeed(seedValue) {
 }
 
 var NODE_TYPES = {
-  fight: { icon: '\u2694\uFE0F', label: 'Fight' },
-  elite: { icon: '\uD83D\uDD25', label: 'Elite' },
-  rest: { icon: '\uD83C\uDFD5\uFE0F', label: 'Rest' },
-  shop: { icon: '\uD83D\uDCB0', label: 'Shop' },
-  event: { icon: '\u2753', label: 'Event' },
-  treasure: { icon: '\uD83D\uDC8E', label: 'Treasure' },
-  boss: { icon: '\uD83D\uDC80', label: 'Boss' },
-  start: { icon: '\uD83E\uDDD9', label: 'Start' }
+  fight: { icon: '⚔️', img: 'assets/map/node-fight.png', label: 'Encounter' },
+  elite: { icon: '🔥', img: 'assets/map/node-elite.png', label: 'Elite' },
+  rest: { icon: '🛏️', img: 'assets/map/node-rest.png', label: 'Crew Quarters' },
+  shop: { icon: '💰', img: 'assets/map/node-shop.png', label: 'Supply Depot' },
+  event: { icon: '❓', img: 'assets/map/node-event.png', label: 'Event' },
+  treasure: { icon: '💎', img: 'assets/map/node-treasure.png', label: 'Salvage' },
+  boss: { icon: '💀', img: 'assets/map/node-boss.png', label: 'Boss' },
+  start: { icon: '🧑‍🚀', img: 'assets/map/node-start.png', label: 'Start' }
 };
 
 // === ACT 1 FIGHT POOLS ===
@@ -345,7 +345,7 @@ function selectMapNode(floorIdx, nodeIdx) {
     case 'boss':
       var bossId;
       if (act === 3) {
-        // Act 3 boss is always The Awakened One
+        // Act 3 boss is always the Overlord AI
         bossId = 'awakened_one';
       } else {
         var bossCandidates = ['slime_boss', 'the_guardian', 'hexaghost'];
@@ -443,7 +443,7 @@ function showActTransition(nextAct) {
     // Update transition text dynamically
     var textEl = screen.querySelector('.act-transition-text');
     if (textEl) {
-      textEl.textContent = 'ACT ' + nextAct;
+      textEl.textContent = 'SECTOR ' + nextAct;
     }
     screen.classList.remove('hidden');
 

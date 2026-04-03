@@ -2,8 +2,8 @@
 var ENEMY_DATABASE = {
   jaw_worm: {
     id: 'jaw_worm',
-    name: 'Jaw Worm',
-    sprite: '🐛',
+    name: 'Space Slug',
+    sprite: 'assets/enemies/space-slug.png',
     maxHp: [40, 44],
     getNextIntent: function(enemy, turnNumber) {
       var pattern = turnNumber % 3;
@@ -16,7 +16,7 @@ var ENEMY_DATABASE = {
       } else if (pattern === 1) {
         return {
           type: 'buff',
-          label: 'Bellow',
+          label: 'Power Up',
           effects: [
             { type: 'block', value: 6 },
             { type: 'applyBuff', status: 'strength', value: 3 }
@@ -33,14 +33,14 @@ var ENEMY_DATABASE = {
   },
   cultist: {
     id: 'cultist',
-    name: 'Cultist',
-    sprite: '🧙',
+    name: 'Rogue Android',
+    sprite: 'assets/enemies/rogue-android.png',
     maxHp: [48, 54],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber === 0) {
         return {
           type: 'buff',
-          label: 'Incantation',
+          label: 'Self-Upgrade',
           effects: [{ type: 'applyBuff', status: 'strength', value: 3 }]
         };
       }
@@ -53,8 +53,8 @@ var ENEMY_DATABASE = {
   },
   red_louse: {
     id: 'red_louse',
-    name: 'Red Louse',
-    sprite: '🐞',
+    name: 'Space Flea',
+    sprite: 'assets/enemies/space-flea.png',
     maxHp: [10, 15],
     getNextIntent: function(enemy, turnNumber) {
       if (Math.random() < 0.75) {
@@ -76,14 +76,14 @@ var ENEMY_DATABASE = {
   },
   nob: {
     id: 'nob',
-    name: 'Gremlin Nob',
-    sprite: '👹',
+    name: 'Enforcer Bot',
+    sprite: 'assets/enemies/enforcer-bot.png',
     maxHp: [82, 86],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber === 0) {
         return {
           type: 'buff',
-          label: 'Bellow',
+          label: 'War Protocol',
           effects: [{ type: 'applyBuff', status: 'strength', value: 2 }, { type: 'applyBuff', status: 'enrage', value: 2 }]
         };
       }
@@ -91,13 +91,13 @@ var ENEMY_DATABASE = {
       if (turnNumber % 2 === 1) {
         return {
           type: 'attack',
-          label: 'Rush',
+          label: 'Ram',
           effects: [{ type: 'damage', value: 14 }]
         };
       } else {
         return {
           type: 'attack',
-          label: 'Skull Bash',
+          label: 'Concussion Blast',
           effects: [{ type: 'damage', value: 6 }, { type: 'applyStatus', status: 'vulnerable', value: 2 }]
         };
       }
@@ -105,15 +105,15 @@ var ENEMY_DATABASE = {
   },
   lagavulin: {
     id: 'lagavulin',
-    name: 'Lagavulin',
-    sprite: '🐉',
+    name: 'Sentinel Drone',
+    sprite: 'assets/enemies/sentinel-drone.png',
     maxHp: [100, 110],
     getNextIntent: function(enemy, turnNumber) {
       // Sleeps for first 3 turns with 8 block, then attacks
       if (turnNumber < 3 && !enemy._awake) {
         return {
           type: 'defend',
-          label: 'Sleeping',
+          label: 'Standby',
           effects: [{ type: 'block', value: 8 }]
         };
       }
@@ -127,7 +127,7 @@ var ENEMY_DATABASE = {
       } else if (turnNumber % 3 === 1) {
         return {
           type: 'debuff',
-          label: 'Siphon Soul',
+          label: 'System Drain',
           effects: [{ type: 'applyStatus', status: 'weak', value: 1 }, { type: 'applyDebuff', status: 'strength', value: -1 }]
         };
       } else {
@@ -141,8 +141,8 @@ var ENEMY_DATABASE = {
   },
   sentry: {
     id: 'sentry',
-    name: 'Sentry',
-    sprite: '🗿',
+    name: 'Turret',
+    sprite: 'assets/enemies/turret.png',
     maxHp: [38, 42],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber % 2 === 0) {
@@ -154,7 +154,7 @@ var ENEMY_DATABASE = {
       } else {
         return {
           type: 'debuff',
-          label: 'Bolt',
+          label: 'EMP Burst',
           effects: [{ type: 'addStatusCard', card: 'dazed', count: 2 }]
         };
       }
@@ -162,26 +162,26 @@ var ENEMY_DATABASE = {
   },
   slime_boss: {
     id: 'slime_boss',
-    name: 'Slime Boss',
-    sprite: '🟢',
+    name: 'Plasma Blob',
+    sprite: 'assets/enemies/plasma-blob.png',
     maxHp: [150, 150],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber % 3 === 0) {
         return {
           type: 'attack',
-          label: 'Slam',
+          label: 'Plasma Crash',
           effects: [{ type: 'damage', value: 35 }]
         };
       } else if (turnNumber % 3 === 1) {
         return {
           type: 'buff',
-          label: 'Preparing',
+          label: 'Charging',
           effects: [{ type: 'applyBuff', status: 'strength', value: 3 }]
         };
       } else {
         return {
           type: 'debuff',
-          label: 'Goop Spray',
+          label: 'Plasma Spray',
           effects: [{ type: 'addStatusCard', card: 'slimed', count: 3 }]
         };
       }
@@ -196,20 +196,20 @@ var ENEMY_DATABASE = {
   },
   medium_slime: {
     id: 'medium_slime',
-    name: 'Med Slime',
-    sprite: '🟡',
+    name: 'Plasma Fragment',
+    sprite: 'assets/enemies/plasma-fragment.png',
     maxHp: [65, 65],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber % 2 === 0) {
         return {
           type: 'attack',
-          label: 'Tackle',
+          label: 'Impact',
           effects: [{ type: 'damage', value: 10 }]
         };
       } else {
         return {
           type: 'debuff',
-          label: 'Lick',
+          label: 'Corrode',
           effects: [{ type: 'applyStatus', status: 'weak', value: 1 }]
         };
       }
@@ -217,20 +217,20 @@ var ENEMY_DATABASE = {
   },
   fungi_beast: {
     id: 'fungi_beast',
-    name: 'Fungi Beast',
-    sprite: '🍄',
+    name: 'Spore Alien',
+    sprite: 'assets/enemies/spore-alien.png',
     maxHp: [22, 28],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber % 2 === 0) {
         return {
           type: 'attack',
-          label: 'Bite',
+          label: 'Acid Bite',
           effects: [{ type: 'damage', value: 6 }, { type: 'applyStatus', status: 'vulnerable', value: 1 }]
         };
       } else {
         return {
           type: 'attack',
-          label: 'Grow',
+          label: 'Germinate',
           effects: [{ type: 'damage', value: 4 }]
         };
       }
@@ -238,25 +238,25 @@ var ENEMY_DATABASE = {
     onDeath: function() {
       var wound = createCardInstance('wound');
       if (wound) gameState.player.discardPile.push(wound);
-      log('Fungi Beast drops a Wound!');
+      log('Spore Alien drops a Hull Breach!');
     }
   },
   blue_slime: {
     id: 'blue_slime',
-    name: 'Blue Slime',
-    sprite: '🔵',
+    name: 'Cryo Gel',
+    sprite: 'assets/enemies/cryo-gel.png',
     maxHp: [12, 16],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber % 2 === 0) {
         return {
           type: 'attack',
-          label: 'Tackle',
+          label: 'Impact',
           effects: [{ type: 'damage', value: 5 }]
         };
       } else {
         return {
           type: 'debuff',
-          label: 'Goop',
+          label: 'Freeze',
           effects: [{ type: 'addStatusCard', card: 'slimed', count: 1 }]
         };
       }
@@ -264,26 +264,26 @@ var ENEMY_DATABASE = {
   },
   looter: {
     id: 'looter',
-    name: 'Looter',
-    sprite: '🥷',
+    name: 'Space Pirate',
+    sprite: 'assets/enemies/space-pirate.png',
     maxHp: [44, 48],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber < 2) {
         return {
           type: 'attack',
-          label: 'Mug',
+          label: 'Blaster Shot',
           effects: [{ type: 'damage', value: 10 }]
         };
       } else if (turnNumber === 2) {
         return {
           type: 'buff',
-          label: 'Smoke Bomb',
+          label: 'Warp Out',
           effects: [{ type: 'escape' }]
         };
       } else {
         return {
           type: 'attack',
-          label: 'Mug',
+          label: 'Blaster Shot',
           effects: [{ type: 'damage', value: 10 }]
         };
       }
@@ -291,27 +291,27 @@ var ENEMY_DATABASE = {
   },
   acid_slime_m: {
     id: 'acid_slime_m',
-    name: 'Acid Slime',
-    sprite: '🟢',
+    name: 'Toxic Gel',
+    sprite: 'assets/enemies/toxic-gel.png',
     maxHp: [28, 32],
     getNextIntent: function(enemy, turnNumber) {
       var pattern = turnNumber % 3;
       if (pattern === 0) {
         return {
           type: 'attack',
-          label: 'Tackle',
+          label: 'Impact',
           effects: [{ type: 'damage', value: 10 }]
         };
       } else if (pattern === 1) {
         return {
           type: 'attack',
-          label: 'Corrosive',
+          label: 'Acid Spray',
           effects: [{ type: 'damage', value: 8 }, { type: 'addStatusCard', card: 'slimed', count: 1 }]
         };
       } else {
         return {
           type: 'debuff',
-          label: 'Lick',
+          label: 'Corrode',
           effects: [{ type: 'applyStatus', status: 'weak', value: 1 }]
         };
       }
@@ -319,20 +319,20 @@ var ENEMY_DATABASE = {
   },
   spike_slime_m: {
     id: 'spike_slime_m',
-    name: 'Spike Slime',
-    sprite: '🔴',
+    name: 'Volatile Gel',
+    sprite: 'assets/enemies/volatile-gel.png',
     maxHp: [28, 32],
     getNextIntent: function(enemy, turnNumber) {
       if (turnNumber % 2 === 0) {
         return {
           type: 'attack',
-          label: 'Flame Tackle',
+          label: 'Burst',
           effects: [{ type: 'damage', value: 8 }, { type: 'applyStatus', status: 'frail', value: 1 }]
         };
       } else {
         return {
           type: 'debuff',
-          label: 'Lick',
+          label: 'Corrode',
           effects: [{ type: 'applyStatus', status: 'weak', value: 1 }]
         };
       }
@@ -340,20 +340,20 @@ var ENEMY_DATABASE = {
   },
   snecko: {
     id: 'snecko',
-    name: 'Snecko',
-    sprite: '🐍',
+    name: 'Serpentoid',
+    sprite: 'assets/enemies/serpentoid.png',
     maxHp: [46, 50],
     getNextIntent: function(enemy, turnNumber) {
       if (Math.random() < 0.7) {
         return {
           type: 'attack',
-          label: 'Tail Whip',
+          label: 'Tail Lash',
           effects: [{ type: 'damage', value: 8 }, { type: 'applyStatus', status: 'vulnerable', value: 2 }]
         };
       } else {
         return {
           type: 'attack',
-          label: 'Bite',
+          label: 'Fangs',
           effects: [{ type: 'damage', value: 15 }]
         };
       }
@@ -361,8 +361,8 @@ var ENEMY_DATABASE = {
   },
   book_of_stabbing: {
     id: 'book_of_stabbing',
-    name: 'Book of Stabbing',
-    sprite: '📖',
+    name: 'Murder-Bot Manual',
+    sprite: 'assets/enemies/murder-bot-manual.png',
     maxHp: [160, 168],
     getNextIntent: function(enemy, turnNumber) {
       if (!enemy._stabCount) {
@@ -376,15 +376,15 @@ var ENEMY_DATABASE = {
       enemy._stabCount = stabCount + 1;
       return {
         type: 'attack',
-        label: 'Multi-Stab x' + stabCount,
+        label: 'Multi-Drill x' + stabCount,
         effects: effects
       };
     }
   },
   awakened_one: {
     id: 'awakened_one',
-    name: 'The Awakened One',
-    sprite: '👁️',
+    name: 'Overlord AI',
+    sprite: 'assets/enemies/overlord-ai.png',
     maxHp: [300, 300],
     getNextIntent: function(enemy, turnNumber) {
       // Initialize phase tracking
@@ -399,7 +399,7 @@ var ENEMY_DATABASE = {
         if (!enemy.statusEffects.strength) enemy.statusEffects.strength = 0;
         enemy.statusEffects.strength += 10;
         enemy.currentHp = Math.min(enemy.maxHp, enemy.currentHp + 50);
-        log('The Awakened One awakens! Strength +10, healed 50 HP!');
+        log('The Overlord AI awakens! Strength +10, healed 50 HP!');
         return {
           type: 'buff',
           label: 'Awakened!',
@@ -414,13 +414,13 @@ var ENEMY_DATABASE = {
         if (p1 === 0) {
           return {
             type: 'attack',
-            label: 'Slash 20',
+            label: 'Laser Slash 20',
             effects: [{ type: 'damage', value: 20 }]
           };
         } else if (p1 === 1) {
           return {
             type: 'attack',
-            label: 'Soul Strike 6x4',
+            label: 'Data Storm 6x4',
             effects: [
               { type: 'damage', value: 6 },
               { type: 'damage', value: 6 },
@@ -431,7 +431,7 @@ var ENEMY_DATABASE = {
         } else {
           return {
             type: 'buff',
-            label: 'Rebirth',
+            label: 'Self-Repair',
             effects: [
               { type: 'heal', value: 10 },
               { type: 'applyBuff', status: 'strength', value: 2 }
@@ -445,7 +445,7 @@ var ENEMY_DATABASE = {
         if (p2 === 0) {
           return {
             type: 'attack',
-            label: 'Dark Echo 25',
+            label: 'Dark Pulse 25',
             effects: [
               { type: 'damage', value: 25 },
               { type: 'applyStatus', status: 'weak', value: 2 }
@@ -454,7 +454,7 @@ var ENEMY_DATABASE = {
         } else if (p2 === 1) {
           return {
             type: 'attack',
-            label: 'Void 15',
+            label: 'Gravity Well 15',
             effects: [
               { type: 'damage', value: 15 },
               { type: 'applyStatus', status: 'vulnerable', value: 2 }
@@ -463,7 +463,7 @@ var ENEMY_DATABASE = {
         } else {
           return {
             type: 'attack',
-            label: 'Wrath 40',
+            label: 'Overload 40',
             effects: [{ type: 'damage', value: 40 }]
           };
         }
@@ -472,8 +472,8 @@ var ENEMY_DATABASE = {
   },
   nemesis: {
     id: 'nemesis',
-    name: 'Nemesis',
-    sprite: '👤',
+    name: 'Bounty Hunter',
+    sprite: 'assets/enemies/bounty-hunter.png',
     maxHp: [180, 185],
     getNextIntent: function(enemy, turnNumber) {
       // Every 4th turn (0-indexed: turn 3, 7, 11...): intangible
@@ -494,13 +494,13 @@ var ENEMY_DATABASE = {
       if (cycle === 0) {
         return {
           type: 'attack',
-          label: 'Scythe 45',
+          label: 'Plasma Scythe 45',
           effects: [{ type: 'damage', value: 45 }]
         };
       } else if (cycle === 1) {
         return {
           type: 'debuff',
-          label: 'Debilitate',
+          label: 'Disruptor',
           effects: [
             { type: 'applyStatus', status: 'weak', value: 3 },
             { type: 'applyStatus', status: 'vulnerable', value: 3 }
@@ -517,8 +517,8 @@ var ENEMY_DATABASE = {
   },
   the_guardian: {
     id: 'the_guardian',
-    name: 'The Guardian',
-    sprite: '🗿',
+    name: 'Defense Mainframe',
+    sprite: 'assets/enemies/defense-mainframe.png',
     maxHp: [240, 240],
     getNextIntent: function(enemy, turnNumber) {
       // Check for 50% HP threshold - gain 10 strength once
@@ -526,7 +526,7 @@ var ENEMY_DATABASE = {
         enemy._enraged = true;
         if (!enemy.statusEffects.strength) enemy.statusEffects.strength = 0;
         enemy.statusEffects.strength += 10;
-        log('The Guardian enters a rage! Strength +10!');
+        log('Defense Mainframe enters overdrive! Strength +10!');
       }
       // Mode switch every 4 turns
       var mode = Math.floor(turnNumber / 4) % 2;
@@ -536,13 +536,13 @@ var ENEMY_DATABASE = {
         if (phase % 2 === 0) {
           return {
             type: 'attack',
-            label: 'Fierce Bash',
+            label: 'Hydraulic Slam',
             effects: [{ type: 'damage', value: 32 }]
           };
         } else {
           return {
             type: 'defend',
-            label: 'Vent Steam',
+            label: 'Vent Coolant',
             effects: [{ type: 'block', value: 9 }]
           };
         }
@@ -551,13 +551,13 @@ var ENEMY_DATABASE = {
         if (phase % 2 === 0) {
           return {
             type: 'attack',
-            label: 'Whirlwind',
+            label: 'Turret Barrage',
             effects: [{ type: 'damage', value: 5 }, { type: 'damage', value: 5 }, { type: 'damage', value: 5 }, { type: 'damage', value: 5 }]
           };
         } else {
           return {
             type: 'buff',
-            label: 'Charge Up',
+            label: 'Recharge',
             effects: [{ type: 'block', value: 9 }, { type: 'applyBuff', status: 'strength', value: 3 }]
           };
         }

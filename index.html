@@ -3,24 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Card Roguelike - Combat Demo</title>
+  <title>Space Deck - Combat Demo</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="game-container">
-    <button id="mute-btn" onclick="toggleMute()">🔊</button>
+    <div id="top-bar-buttons">
+      <button id="map-btn" class="top-btn" title="Station Map">🗺️</button>
+      <button id="deck-btn" class="top-btn" title="View Deck">🃏</button>
+      <button id="settings-btn" class="top-btn" title="Settings">⚙️</button>
+    </div>
     <div id="turn-banner" class="turn-banner hidden"></div>
+    <div id="screen-effect"></div>
     <div id="relic-bar"></div>
     <div id="encounter-info"></div>
 
-    <div id="enemy-area"></div>
-
-    <div id="middle-area">
-      <div id="combat-log"></div>
-    </div>
-
     <div id="player-area">
-      <div id="player-avatar">🧙‍♂️</div>
+      <div id="player-avatar"><img src="assets/player-avatar.png" alt="Space Monkey" style="width:100%;height:100%;object-fit:contain;"></div>
       <div id="energy-display">3/3</div>
       <div id="player-hp">
         <span>&#x2764;</span>
@@ -38,19 +37,25 @@
       <div id="potion-slots"></div>
     </div>
 
+    <div id="enemy-area"></div>
+
+    <div id="middle-area">
+      <div id="combat-log"></div>
+    </div>
+
     <div id="hand-area"></div>
 
     <div id="pile-info">
       <div id="draw-pile-count">Draw: 0</div>
-      <button id="end-turn-btn" onclick="endPlayerTurn()">End Turn</button>
+      <button id="end-turn-btn" onclick="endPlayerTurn()">END TURN</button>
       <div id="discard-pile-count">Discard: 0</div>
       <div id="exhaust-pile-count">Exhaust: 0</div>
     </div>
 
     <!-- Start Screen -->
     <div id="start-screen" class="overlay-screen hidden">
-      <div class="overlay-title" style="color:#feca57;font-size:42px;">&#x2694;&#xFE0F; Card Roguelike</div>
-      <div class="overlay-subtitle">A Slay the Spire-inspired demo</div>
+      <img src="assets/title-screen.webp" alt="Space Deck" id="title-logo">
+      <div class="overlay-subtitle" style="color:rgba(0,255,204,0.6);font-family:Courier New,monospace;letter-spacing:3px;margin-top:-5px;">A SPACE QUEST-INSPIRED CARD ROGUELIKE</div>
       <div id="start-options"></div>
     </div>
 
@@ -64,31 +69,31 @@
 
     <!-- Game Over Screen -->
     <div id="game-over-screen" class="overlay-screen hidden">
-      <div class="overlay-title defeat" id="game-over-title">Defeat</div>
-      <div class="overlay-subtitle" id="game-over-subtitle">You have been slain.</div>
+      <div class="overlay-title defeat" id="game-over-title">Mission Failed</div>
+      <div class="overlay-subtitle" id="game-over-subtitle">Your ship has been destroyed.</div>
       <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
     </div>
 
     <!-- Map Screen -->
     <div id="map-screen" class="overlay-screen hidden">
-      <div class="overlay-title" style="font-size:24px;margin-bottom:10px;">Floor Map</div>
+      <div class="overlay-title" style="font-size:24px;margin-bottom:10px;">Station Map</div>
       <div id="map-container"></div>
       <div id="map-player-info"></div>
     </div>
 
     <!-- Rest Screen -->
     <div id="rest-screen" class="overlay-screen hidden">
-      <div class="overlay-title" style="color:#feca57;">Rest Site</div>
+      <div class="overlay-title" style="color:#00ffcc;">Crew Quarters</div>
       <div class="overlay-subtitle">Choose an action:</div>
       <div id="rest-options"></div>
     </div>
 
     <!-- Shop Screen -->
     <div id="shop-screen" class="overlay-screen hidden">
-      <div class="overlay-title" style="color:#feca57;">Shop</div>
-      <div id="shop-gold" style="color:#feca57;font-size:18px;margin-bottom:15px;"></div>
+      <div class="overlay-title" style="color:#00ffcc;">Supply Depot</div>
+      <div id="shop-gold" style="color:#00ffcc;font-size:18px;margin-bottom:15px;"></div>
       <div id="shop-items"></div>
-      <button class="btn btn-secondary" onclick="closeShop()">Leave Shop</button>
+      <button class="btn btn-secondary" onclick="closeShop()">Leave Depot</button>
     </div>
 
     <!-- Event Screen -->
@@ -108,16 +113,16 @@
 
     <!-- Upgrade Screen (for rest site smith) -->
     <div id="upgrade-screen" class="overlay-screen hidden">
-      <div class="overlay-title" style="color:#feca57;">Upgrade a Card</div>
-      <div class="overlay-subtitle">Click a card to upgrade it:</div>
+      <div class="overlay-title" style="color:#00ffcc;">Upgrade Module</div>
+      <div class="overlay-subtitle">Click a module to upgrade it:</div>
       <div id="upgrade-cards"></div>
       <button class="btn btn-secondary" onclick="cancelUpgrade()">Cancel</button>
     </div>
 
     <!-- Card Remove Screen (for shop) -->
     <div id="remove-screen" class="overlay-screen hidden">
-      <div class="overlay-title" style="color:#ff4757;">Remove a Card</div>
-      <div class="overlay-subtitle">Click a card to remove it from your deck:</div>
+      <div class="overlay-title" style="color:#ff4757;">Jettison Module</div>
+      <div class="overlay-subtitle">Click a module to jettison from your deck:</div>
       <div id="remove-cards"></div>
       <button class="btn btn-secondary" onclick="cancelRemove()">Cancel</button>
     </div>
@@ -131,14 +136,14 @@
 
     <!-- Tutorial -->
     <div id="tutorial-screen" class="overlay-screen hidden">
-      <div class="overlay-title" style="color:#feca57;font-size:28px;">How to Play</div>
+      <div class="overlay-title" style="color:#00ffcc;font-size:28px;">Mission Briefing</div>
       <div id="tutorial-content" style="max-width:600px;text-align:left;line-height:1.8;font-size:14px;color:#ccc;margin-bottom:20px;">
-        <p>⚔️ <strong>Cards</strong> — Click cards to play them. Attack cards need a target (click an enemy). Skills play instantly.</p>
-        <p>🔴 <strong>Energy</strong> — Each card costs energy (red circle). You get 3 per turn.</p>
-        <p>🛡️ <strong>Block</strong> — Reduces incoming damage. Resets each turn.</p>
-        <p>👁️ <strong>Intents</strong> — Enemy actions shown above them. Plan accordingly!</p>
-        <p>⏭️ <strong>End Turn</strong> — Click or press E when done playing cards.</p>
-        <p>🗺️ <strong>Map</strong> — Choose your path: fights, shops, rest sites, events, and more.</p>
+        <p>🔫 <strong>Cards</strong> — Click cards to deploy them. Attack cards need a target (click an enemy). Skills activate instantly.</p>
+        <p>🔋 <strong>Energy</strong> — Each card costs energy (cyan orb). You get 3 per turn.</p>
+        <p>🛡️ <strong>Shields</strong> — Reduces incoming damage. Resets each turn.</p>
+        <p>👁️ <strong>Scanners</strong> — Enemy actions shown above them. Plan accordingly!</p>
+        <p>⏭️ <strong>End Turn</strong> — Click or press E when done deploying cards.</p>
+        <p>🗺️ <strong>Station Map</strong> — Choose your route: fights, depots, crew quarters, events, and more.</p>
         <p>⌨️ <strong>Shortcuts</strong> — 1-5 select cards, E ends turn, Escape cancels.</p>
       </div>
       <button class="btn btn-primary" onclick="closeTutorial()">Got it!</button>
@@ -152,9 +157,17 @@
     <!-- Card Preview (mobile) -->
     <div id="card-preview" class="overlay-screen hidden" style="background:rgba(0,0,0,0.7);"></div>
 
+    <!-- Settings Screen -->
+    <div id="settings-screen" class="overlay-screen hidden">
+      <h2 class="overlay-title">Settings</h2>
+      <div id="settings-content"></div>
+      <button class="btn btn-secondary" onclick="closeSettings()">Close</button>
+    </div>
+
     <div id="tooltip"></div>
   </div>
 
+  <script src="theme.js"></script>
   <script src="cards.js"></script>
   <script src="enemies.js"></script>
   <script src="potions.js"></script>

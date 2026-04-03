@@ -1,142 +1,142 @@
 var RELIC_DATABASE = {
   burning_blood: {
-    id: 'burning_blood', name: 'Burning Blood', art: '🩸',
-    description: 'Heal 6 HP at end of combat.',
+    id: 'burning_blood', name: 'Nano Repair Kit', art: '🔋',
+    description: 'Restore 6 {hp} at end of combat.',
     trigger: 'onCombatEnd'
   },
   vajra: {
-    id: 'vajra', name: 'Vajra', art: '🔱',
-    description: 'Start each combat with 1 Strength.',
+    id: 'vajra', name: 'Combat Chip', art: '🔱',
+    description: 'Start each combat with 1 {strength}.',
     trigger: 'onCombatStart'
   },
   anchor: {
-    id: 'anchor', name: 'Anchor', art: '⚓',
-    description: 'Start each combat with 10 Block.',
+    id: 'anchor', name: 'Gravity Anchor', art: '⚓',
+    description: 'Start each combat with 10 {block}.',
     trigger: 'onCombatStart'
   },
   bag_of_preparation: {
-    id: 'bag_of_preparation', name: 'Bag of Prep', art: '🎒',
-    description: 'Draw 2 additional cards on turn 1.',
+    id: 'bag_of_preparation', name: 'Tactical Datapad', art: '📱',
+    description: '{draw} 2 additional cards on {turn} 1.',
     trigger: 'onFirstTurn'
   },
   lantern: {
-    id: 'lantern', name: 'Lantern', art: '🏮',
-    description: 'Gain 1 Energy on turn 1.',
+    id: 'lantern', name: 'Backup Battery', art: '🔋',
+    description: 'Gain 1 {energy} on {turn} 1.',
     trigger: 'onFirstTurn'
   },
   orichalcum: {
-    id: 'orichalcum', name: 'Orichalcum', art: '🪨',
-    description: 'End turn with 0 Block? Gain 6.',
+    id: 'orichalcum', name: 'Auto-Shield', art: '🛡️',
+    description: 'End {turn} with 0 {block}? Gain 6.',
     trigger: 'onEndTurn'
   },
   pen_nib: {
-    id: 'pen_nib', name: 'Pen Nib', art: '🖋️',
-    description: 'Every 10th attack deals double damage.',
+    id: 'pen_nib', name: 'Calibrator', art: '🎯',
+    description: 'Every 10th attack deals double {damage}.',
     trigger: 'onAttackPlayed', counter: true
   },
   meat_on_bone: {
-    id: 'meat_on_bone', name: 'Meat on Bone', art: '🍖',
-    description: 'End combat below 50% HP? Heal 12.',
+    id: 'meat_on_bone', name: 'Emergency Rations', art: '🍖',
+    description: 'End combat below 50% {hp}? {heal} 12.',
     trigger: 'onCombatEnd'
   },
   red_skull: {
-    id: 'red_skull', name: 'Red Skull', art: '💀',
-    description: 'Below 50% HP? +3 Strength.',
+    id: 'red_skull', name: 'Danger Amplifier', art: '⚠️',
+    description: 'Below 50% {hp}? +3 {strength}.',
     trigger: 'onTurnStart'
   },
   blood_vial: {
-    id: 'blood_vial', name: 'Blood Vial', art: '🧪',
-    description: 'At start of combat, heal 2 HP.',
+    id: 'blood_vial', name: 'Med Injector', art: '💉',
+    description: 'At start of combat, {heal} 2 {hp}.',
     trigger: 'onCombatStart'
   },
   preserved_insect: {
-    id: 'preserved_insect', name: 'Preserved Insect', art: '🐛',
-    description: 'Elites start with 25% less HP.',
+    id: 'preserved_insect', name: 'EMP Device', art: '📡',
+    description: 'Elites start with 25% less {hp}.',
     trigger: 'onCombatStart'
   },
   mango: {
-    id: 'mango', name: 'Mango', art: '🥭',
-    description: '+14 Max HP on pickup.',
+    id: 'mango', name: 'Augment Module', art: '🧬',
+    description: '+14 Max {hp} on pickup.',
     trigger: 'onPickup'
   },
   strawberry: {
-    id: 'strawberry', name: 'Strawberry', art: '🍓',
-    description: '+7 Max HP on pickup.',
+    id: 'strawberry', name: 'Stim Pack', art: '💊',
+    description: '+7 Max {hp} on pickup.',
     trigger: 'onPickup'
   },
   nunchaku: {
-    id: 'nunchaku', name: 'Nunchaku', art: '🥢',
-    description: 'Every 10 attacks, gain 1 Energy.',
+    id: 'nunchaku', name: 'Overcharger', art: '🔌',
+    description: 'Every 10 attacks, gain 1 {energy}.',
     trigger: 'onAttackPlayed', counter: true
   },
   ornamental_fan: {
-    id: 'ornamental_fan', name: 'Ornamental Fan', art: '🪭',
-    description: 'Every 3 attacks, gain 4 Block.',
+    id: 'ornamental_fan', name: 'Deflector Array', art: '📡',
+    description: 'Every 3 attacks, gain 4 {block}.',
     trigger: 'onAttackPlayed', counter: true
   },
   kunai: {
-    id: 'kunai', name: 'Kunai', art: '🗡️',
-    description: 'Every 3 attacks, gain 1 Dexterity.',
+    id: 'kunai', name: 'Targeting Laser', art: '🎯',
+    description: 'Every 3 attacks, gain 1 {dexterity}.',
     trigger: 'onAttackPlayed', counter: true
   },
   happy_flower: {
-    id: 'happy_flower', name: 'Happy Flower', art: '🌻',
-    description: 'Every 3 turns, gain 1 Energy.',
+    id: 'happy_flower', name: 'Solar Cell', art: '☀️',
+    description: 'Every 3 {turn}s, gain 1 {energy}.',
     trigger: 'onTurnStart', counter: true
   },
   oddly_smooth_stone: {
-    id: 'oddly_smooth_stone', name: 'Smooth Stone', art: '🪨',
-    description: 'Start combat with 1 Dexterity.',
+    id: 'oddly_smooth_stone', name: 'Stabilizer', art: '⚖️',
+    description: 'Start combat with 1 {dexterity}.',
     trigger: 'onCombatStart'
   },
   horn_cleat: {
-    id: 'horn_cleat', name: 'Horn Cleat', art: '📯',
-    description: 'Turn 2: gain 14 Block.',
+    id: 'horn_cleat', name: 'Hull Plating', art: '🛡️',
+    description: '{turn} 2: gain 14 {block}.',
     trigger: 'onTurnStart'
   },
   letter_opener: {
-    id: 'letter_opener', name: 'Letter Opener', art: '✉️',
-    description: 'Every 3 skills, deal 5 damage to all.',
+    id: 'letter_opener', name: 'Shock Coil', art: '⚡',
+    description: 'Every 3 skills, deal 5 {damage} to all.',
     trigger: 'onSkillPlayed', counter: true
   },
   shuriken: {
-    id: 'shuriken', name: 'Shuriken', art: '⭐',
-    description: 'Every 3 attacks played, gain 1 Strength.',
+    id: 'shuriken', name: 'Power Coupler', art: '🔗',
+    description: 'Every 3 attacks, gain 1 {strength}.',
     trigger: 'onAttackPlayed', counter: true
   },
   du_vu_doll: {
-    id: 'du_vu_doll', name: 'Du-Vu Doll', art: '🪆',
-    description: '+1 Strength for each Curse in deck.',
+    id: 'du_vu_doll', name: 'Chaos Engine', art: '🔧',
+    description: '+1 {strength} per Curse in {deck}.',
     trigger: 'onCombatStart'
   },
   centennial_puzzle: {
-    id: 'centennial_puzzle', name: 'Centennial Puzzle', art: '🧩',
-    description: 'First time you lose HP each combat, draw 3.',
+    id: 'centennial_puzzle', name: 'Black Box', art: '📦',
+    description: 'First {hp} loss each combat: {draw} 3.',
     trigger: 'onLoseHP'
   },
   self_forming_clay: {
-    id: 'self_forming_clay', name: 'Self-Forming Clay', art: '🏺',
-    description: 'Whenever you lose HP, gain 3 Block next turn.',
+    id: 'self_forming_clay', name: 'Reactive Armor', art: '🛡️',
+    description: 'Lose {hp}? Gain 3 {block} next {turn}.',
     trigger: 'onLoseHP'
   },
   torii: {
-    id: 'torii', name: 'Torii', art: '⛩️',
-    description: 'Receive 5 or less attack damage? Reduce to 1.',
+    id: 'torii', name: 'Dampener Field', art: '🔰',
+    description: 'Receive ≤5 {damage}? Reduce to 1.',
     trigger: 'onDamageReceived'
   },
   snecko_eye: {
-    id: 'snecko_eye', name: 'Snecko Eye', art: '👁️',
-    description: 'Draw 2 extra cards. Card costs randomized 0-3.',
+    id: 'snecko_eye', name: 'Chaos Visor', art: '👁️',
+    description: '{draw} 2 extra. Card costs randomized 0-3.',
     trigger: 'onTurnStart'
   },
   dead_branch: {
-    id: 'dead_branch', name: 'Dead Branch', art: '🌿',
-    description: 'Exhaust a card? Add random card to hand.',
+    id: 'dead_branch', name: 'Fabricator', art: '🏭',
+    description: '{exhaust} a card? Add random card to {hand}.',
     trigger: 'onExhaust'
   },
   ice_cream: {
-    id: 'ice_cream', name: 'Ice Cream', art: '🍦',
-    description: 'Energy carries over between turns.',
+    id: 'ice_cream', name: 'Capacitor', art: '🔋',
+    description: '{energy} carries over between {turn}s.',
     trigger: 'passive'
   }
 };
@@ -166,7 +166,7 @@ function triggerRelics(triggerPoint, context) {
         var heal = Math.min(6, gameState.player.maxHp - gameState.player.currentHp);
         if (heal > 0) {
           gameState.player.currentHp += heal;
-          log('Burning Blood heals ' + heal + ' HP.');
+          log('Nano Repair Kit restores ' + heal + ' ' + T('hp') + '.');
         }
         break;
       case 'vajra':
@@ -193,14 +193,14 @@ function triggerRelics(triggerPoint, context) {
         if (gameState.player.relicCounters.pen_nib >= 10) {
           gameState.player.relicCounters.pen_nib = 0;
           gameState.player.penNibActive = true;
-          log('Pen Nib activates! Next attack deals double!');
+          log('Calibrator activates! Next attack deals double!');
         }
         break;
       case 'meat_on_bone':
         if (gameState.player.currentHp < gameState.player.maxHp * 0.5) {
           var mealHeal = Math.min(12, gameState.player.maxHp - gameState.player.currentHp);
           gameState.player.currentHp += mealHeal;
-          log('Meat on the Bone heals ' + mealHeal + ' HP.');
+          log('Emergency Rations ' + T('heal') + 's ' + mealHeal + ' ' + T('hp') + '.');
         }
         break;
       case 'red_skull':
@@ -242,7 +242,7 @@ function triggerRelics(triggerPoint, context) {
         if (gameState.player.relicCounters.nunchaku >= 10) {
           gameState.player.relicCounters.nunchaku = 0;
           gameState.player.energy += 1;
-          log('Nunchaku grants 1 Energy!');
+          log('Overcharger grants 1 ' + T('energy') + '!');
         }
         break;
       case 'ornamental_fan':
@@ -260,7 +260,7 @@ function triggerRelics(triggerPoint, context) {
         if (gameState.player.relicCounters.kunai >= 3) {
           gameState.player.relicCounters.kunai = 0;
           gameState.player.statusEffects.dexterity = (gameState.player.statusEffects.dexterity || 0) + 1;
-          log('Kunai grants +1 Dexterity!');
+          log('Targeting Laser grants +1 ' + T('dexterity') + '!');
         }
         break;
       case 'happy_flower':
@@ -269,7 +269,7 @@ function triggerRelics(triggerPoint, context) {
         if (gameState.player.relicCounters.happy_flower >= 3) {
           gameState.player.relicCounters.happy_flower = 0;
           gameState.player.energy += 1;
-          log('Happy Flower grants 1 Energy!');
+          log('Solar Cell grants 1 ' + T('energy') + '!');
         }
         break;
       case 'horn_cleat':
@@ -297,7 +297,7 @@ function triggerRelics(triggerPoint, context) {
         if (gameState.player.relicCounters.shuriken >= 3) {
           gameState.player.relicCounters.shuriken = 0;
           gameState.player.statusEffects.strength = (gameState.player.statusEffects.strength || 0) + 1;
-          log('Shuriken grants +1 Strength!');
+          log('Power Coupler grants +1 ' + T('strength') + '!');
         }
         break;
       case 'du_vu_doll':
@@ -307,14 +307,14 @@ function triggerRelics(triggerPoint, context) {
         }
         if (curseCount > 0) {
           gameState.player.statusEffects.strength = (gameState.player.statusEffects.strength || 0) + curseCount;
-          log('Du-Vu Doll grants +' + curseCount + ' Strength!');
+          log('Chaos Engine grants +' + curseCount + ' ' + T('strength') + '!');
         }
         break;
       case 'centennial_puzzle':
         if (!gameState.centennialUsed) {
           gameState.centennialUsed = true;
           drawCards(3);
-          log('Centennial Puzzle draws 3 cards!');
+          log('Black Box ' + T('draw') + 's 3 cards!');
         }
         break;
       case 'self_forming_clay':

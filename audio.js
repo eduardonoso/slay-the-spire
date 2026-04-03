@@ -1,6 +1,6 @@
 var AudioManager = {
   ctx: null,
-  enabled: true,
+  enabled: false,
   initialized: false,
 
   init: function() {
